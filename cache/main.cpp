@@ -50,7 +50,27 @@ void test_perfect_cache() {
     }
 }
 
+void test_LFU_cache() {
+    struct Test_t {
+        size_t N;
+        std::vector<int> req;
+        size_t answ;
+    };
+
+    Test_t tests[] = {
+        {3,{7,0,1,2,0,3,0,4,2,3,0,3,2,1,2}, 9}
+    };
+
+    caches::LFU_t cache(tests[0].N);
+    size_t misses = 0;
+    for(const auto& it : tests[0].req)
+        misses += !cache.look_update(it);
+
+    std::cout << misses << std::endl;
+}
+
 int main() {
     test_perfect_cache();
+    test_LFU_cache();
     return 0;
 }

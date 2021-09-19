@@ -2,7 +2,7 @@
 
 namespace caches
 {
-    bool cache_t::look_update(int key) {
+    bool LRU_t::look_update(int key) {
         auto hit = hash_.find(key);
         
         if (hit == hash_.end()) {

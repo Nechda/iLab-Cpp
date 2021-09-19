@@ -8,7 +8,7 @@ namespace caches
         return false;
     }
 
-    size_t perfect_t::hits_at_current_cache(const Cache_table_t& table, size_t from) const {
+    size_t perfect_t::misses_at_current_cache(const Cache_table_t& table, size_t from) const {
         size_t hits = 0;
         size_t N = req_.size();
         for(size_t i = from; i < N; i++)
@@ -19,7 +19,7 @@ namespace caches
     size_t perfect_t::hits_amount() const{
         Cache_table_t cache_table;
         size_t N_iterations = req_.size();
-        size_t total_hits = 0;
+        size_t total_misses = 0;
         std::vector<int> cached_keys(size_);
         cached_keys.resize(0);
 
@@ -27,13 +27,13 @@ namespace caches
             int cur_key = req_[i];
             if(cache_table.count(cur_key) == 1)
                 continue;
-            total_hits++;
-            size_t min_hits = -1;
-            size_t tmp_hits = -1;
+            total_misses++;
+            size_t min_misses = -1;
+            size_t tmp_misses = -1;
 
             // without cache new element
-            tmp_hits = hits_at_current_cache(cache_table, i);
-            min_hits = std::min(min_hits, tmp_hits);
+            tmp_misses = misses_at_current_cache(cache_table, i);
+            min_misses = std::min(min_misses, tmp_misses);
 
             // transform unordered_set into vector
             cached_keys.resize(0);
@@ -52,10 +52,10 @@ namespace caches
                 cache_table.erase(key);
                 cache_table.insert(cur_key);
                 
-                tmp_hits = hits_at_current_cache(cache_table, i);
-                if(tmp_hits < min_hits)
+                tmp_misses = misses_at_current_cache(cache_table, i);
+                if(tmp_misses < min_misses)
                     replaced_key = key;
-                min_hits = std::min(min_hits, tmp_hits);
+                min_misses = std::min(min_misses, tmp_misses);
                 
                 cache_table.erase(cur_key);
                 cache_table.insert(key);
@@ -69,6 +69,6 @@ namespace caches
             }
 
         }
-        return total_hits;
+        return total_misses;
     }
 }

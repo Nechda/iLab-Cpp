@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <iostream>
 
 #define UNRECHEABLE() assert("This line should be unrecheable.");
 
@@ -21,15 +22,15 @@ namespace caches
     };
 
 
-    class cache_t : public ICache {
+    class LRU_t : public ICache {
         public:
-            cache_t() = delete;
-            cache_t(const cache_t&) = delete;
-            cache_t(size_t size) : ICache(size) {}
+            LRU_t() = delete;
+            LRU_t(const LRU_t&) = delete;
+            LRU_t(size_t size) : ICache(size) {}
             
             bool look_update(int key) override;
 
-            ~cache_t() = default;
+            ~LRU_t() = default;
         private:
             using ListIt_t = typename std::list<int>::iterator;
             std::list<int> cache_;
@@ -38,6 +39,34 @@ namespace caches
             bool full() { return cache_.size() == size_; }
     }; 
 
+    class LFU_t : public ICache {
+        public:
+            LFU_t() = delete;
+            LFU_t(const LRU_t&) = delete;
+            LFU_t(size_t size) :
+                ICache(size),
+                min_freq_(1), n_elemets_(0) 
+            {}
+            
+            bool look_update(int key) override;
+
+            ~LFU_t() = default;
+        private:
+            struct Node_t {
+                int key;
+                int val;
+                size_t freq;
+            };
+            using List_t = typename std::list<Node_t>;
+            using ListIt_t = typename List_t::iterator;
+            std::unordered_map<int, ListIt_t> cache_;
+            std::unordered_map<int, List_t> freq_map_;
+
+            size_t min_freq_ = 1;
+            size_t n_elemets_ = 0;
+
+            void update_freq(int key);
+    }; 
 
     class perfect_t : public ICache {
         public:
@@ -56,7 +85,7 @@ namespace caches
         private:
             using Cache_table_t = std::unordered_set<int>;
             std::vector<int> req_;
-            size_t hits_at_current_cache(const Cache_table_t& table, size_t from) const;
+            size_t misses_at_current_cache(const Cache_table_t& table, size_t from) const;
     };
 
 } // namespace cache
