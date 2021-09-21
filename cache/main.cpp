@@ -3,11 +3,13 @@
 
 #define emit(var) std::cout << #var " = " << var << std::endl;
 
+using namespace std;
+
+
 static inline void print_test_title(size_t cur, size_t total, bool ok) {
     std::cout << "[" << cur << "/" << total << "] " << (ok ? "[PASSED]" : "[FAILED]\n");
     std::cout << (cur < total ? "\r" : "");
-    std::cout << (ok && cur == total ? "\n" : "") << std::flush;
-        
+    std::cout << (ok && cur == total ? "\n" : "") << std::flush;  
 }
 
 void test_perfect_cache() {
@@ -58,19 +60,21 @@ void test_LFU_cache() {
     };
 
     Test_t tests[] = {
-        {3,{7,0,1,2,0,3,0,4,2,3,0,3,2,1,2}, 9}
+        {3,{7,0,1,2,0,3,0,4,2,3,0,3,2,1,2}, 10}
     };
 
     caches::LFU_t cache(tests[0].N);
     size_t misses = 0;
-    for(const auto& it : tests[0].req)
-        misses += !cache.look_update(it);
+    for(const auto& it : tests[0].req) {
+        bool hit = cache.look_update(it);
+        misses += !hit;
+    }
 
     std::cout << misses << std::endl;
 }
 
 int main() {
-    test_perfect_cache();
+    //test_perfect_cache();
     test_LFU_cache();
     return 0;
 }

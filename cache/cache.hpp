@@ -4,7 +4,9 @@
 #include <list>
 #include <vector>
 #include <unordered_map>
+#include <set>
 #include <unordered_set>
+#include <stack>
 #include <iostream>
 
 #define UNRECHEABLE() assert("This line should be unrecheable.");
@@ -44,8 +46,8 @@ namespace caches
             LFU_t() = delete;
             LFU_t(const LRU_t&) = delete;
             LFU_t(size_t size) :
-                ICache(size),
-                min_freq_(1), n_elemets_(0) 
+                ICache(size), allocator_(size),
+                min_freq_(1), n_elemets_(0), data_(size)
             {}
             
             bool look_update(int key) override;
@@ -57,15 +59,64 @@ namespace caches
                 int val;
                 size_t freq;
             };
-            using List_t = typename std::list<Node_t>;
-            using ListIt_t = typename List_t::iterator;
-            std::unordered_map<int, ListIt_t> cache_;
-            std::unordered_map<int, List_t> freq_map_;
+
+            class Allocator {
+                public:
+                    Allocator() = delete;
+                    Allocator(const Allocator&) = delete;
+                    Allocator(size_t sz) : size_(sz) {
+                        for(size_t i = 0; i < sz; i++)
+                            available.push(i);
+                    }
+                    
+                    size_t alloc() {
+                        if(available.empty())
+                            return -1;
+                        
+                        auto idx = available.top();
+                        available.pop();
+                        return idx;
+                    }
+
+                    void free(size_t idx) {
+                        available.push(idx);
+                    }
+
+                    ~Allocator() = default;
+                private:
+                    size_t size_;
+                    std::stack<size_t> available;
+                    
+            };
+            using DataIdx_t = size_t;
+
+            std::vector<DataIdx_t> cache_;
+            std::unordered_map<int, DataIdx_t> hash_;
 
             size_t min_freq_ = 1;
             size_t n_elemets_ = 0;
 
-            void update_freq(int key);
+            Allocator allocator_;
+            std::vector<Node_t> data_;
+
+            template<typename T, typename F>
+            void heapify(std::vector<T> arr, int n, int i, F cmp)
+            {
+                int largest = i;
+                int l = 2 * i + 1;
+                int r = 2 * i + 2;
+            
+                if (l < n && cmp(l,largest))
+                    largest = l;
+            
+                if (r < n && cmp(r,largest))
+                    largest = r;
+            
+                if (largest != i) {
+                    std::swap(arr[i], arr[largest]);
+                    heapify(arr, n, largest, cmp);
+                }
+            }
     }; 
 
     class perfect_t : public ICache {
