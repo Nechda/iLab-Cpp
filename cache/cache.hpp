@@ -9,7 +9,7 @@
 #include <stack>
 #include <iostream>
 
-#define UNRECHEABLE() assert("This line should be unrecheable.");
+#define UNRECHEABLE() assert(!"This line should be unrecheable.");
 
 namespace caches
 {
@@ -46,8 +46,9 @@ namespace caches
             LFU_t() = delete;
             LFU_t(const LRU_t&) = delete;
             LFU_t(size_t size) :
-                ICache(size), allocator_(size),
-                min_freq_(1), n_elemets_(0), data_(size)
+                ICache(size), min_freq_(1),
+                n_elemets_(0), allocator_(size), 
+                data_(size)
             {}
             
             bool look_update(int key) override;
@@ -93,8 +94,8 @@ namespace caches
             std::vector<DataIdx_t> cache_;
             std::unordered_map<int, DataIdx_t> hash_;
 
-            size_t min_freq_ = 1;
-            size_t n_elemets_ = 0;
+            size_t min_freq_;
+            size_t n_elemets_;
 
             Allocator allocator_;
             std::vector<Node_t> data_;
@@ -130,7 +131,7 @@ namespace caches
             
             bool look_update(int key) override;
 
-            size_t hits_amount() const;
+            size_t misses_amount() const;
 
             ~perfect_t() = default;
         private:

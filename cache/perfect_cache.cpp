@@ -16,7 +16,7 @@ namespace caches
         return hits;
     }
 
-    size_t perfect_t::hits_amount() const{
+    size_t perfect_t::misses_amount() const{
         Cache_table_t cache_table;
         size_t N_iterations = req_.size();
         size_t total_misses = 0;
