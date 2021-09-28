@@ -1,7 +1,9 @@
 #include "cache.hpp"
 
+#if 0
 namespace caches
 {
+
     bool LFU_t::look_update(int key) {
         if(hash_map_.find(key) != hash_map_.end()) {
             auto it = hash_map_[key];
@@ -36,3 +38,4 @@ namespace caches
         return false;
     }
 }
+#endif

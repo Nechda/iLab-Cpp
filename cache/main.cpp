@@ -75,7 +75,7 @@ void test_LFU_cache() {
 
     size_t N_tests = sizeof(tests)/sizeof(tests[0]);
     for(size_t i = 0; i < N_tests; i++) {
-        caches::LFU_t cache(tests[i].N);
+        caches::LFU_t<int, int> cache(tests[i].N);
         size_t answ = 0;
         for(const auto& it : tests[i].req) {
             bool hit = cache.look_update(it);
@@ -116,7 +116,7 @@ void cache_comparison() {
     size_t N_tests = sizeof(tests)/sizeof(tests[0]);
     for(size_t i = 0; i < N_tests; i++) {
         caches::perfect_t cache_0(tests[i].N, tests[i].req);
-        caches::LFU_t cache_1(tests[i].N);
+        caches::LFU_t<int, int> cache_1(tests[i].N);
 
         size_t misses_0 = cache_0.misses_amount();
         size_t misses_1 = 0;
@@ -140,7 +140,7 @@ int main() {
         size_t cache_size = 0;
         size_t req_amount = 0;
         std::cin >> cache_size >> req_amount;
-        caches::LFU_t cache(cache_size);
+        caches::LFU_t<int, int> cache(cache_size);
 
         size_t hits = 0;
         for(size_t i = 0; i < req_amount; i++) {

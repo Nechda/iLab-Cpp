@@ -41,6 +41,7 @@ namespace caches
             bool full() { return cache_.size() == size_; }
     }; 
 
+    template <typename Key_t, typename Val_t>
     class LFU_t : public ICache {
         public:
             LFU_t() = delete;
@@ -50,7 +51,39 @@ namespace caches
                 n_elemets_(0)
             {}
             
-            bool look_update(int key) override;
+            bool look_update(Key_t key) override {
+                if(hash_map_.find(key) != hash_map_.end()) {
+                    auto it = hash_map_[key];
+                    auto freq = it->freq++;
+
+                    freq_map_[freq + 1].push_front(std::move(*it));
+                    freq_map_[freq].erase(it);
+                    if(freq_map_[freq].empty()) {
+                        freq_map_.erase(freq);
+                        min_freq_ += freq == min_freq_;
+                    }
+
+                    hash_map_[key] = freq_map_[freq + 1].begin();
+
+                    return true;
+                }
+
+                if(n_elemets_ >= size_) {
+                    auto key = freq_map_[min_freq_].back().key;
+                    hash_map_.erase(key);
+                    freq_map_[min_freq_].pop_back();
+                    if(freq_map_[min_freq_].empty())
+                        freq_map_.erase(min_freq_);
+                    n_elemets_--;
+                }
+
+                n_elemets_++;
+                min_freq_ = 1;
+                freq_map_[min_freq_].push_front(std::move(Node_t{key, 0, min_freq_}));
+                hash_map_[key] = freq_map_[min_freq_].begin();
+
+                return false;
+            }
 
             void dump() {
                 for(auto& f : freq_map_) {
@@ -64,16 +97,16 @@ namespace caches
             ~LFU_t() = default;
         private:
             struct Node_t {
-                int key;
-                int val;
+                Key_t key;
+                Val_t val;
                 size_t freq;
             };
             size_t min_freq_;
             size_t n_elemets_;
 
-            using List_t = std::list<Node_t>;
-            using ListIt_t = std::list<Node_t>::iterator;
-            std::unordered_map<int, ListIt_t> hash_map_;
+            using List_t = typename std::list<Node_t>;
+            using ListIt_t = typename std::list<Node_t>::iterator;
+            std::unordered_map<Key_t, ListIt_t> hash_map_;
             std::unordered_map<size_t, List_t> freq_map_;
     }; 
 
