@@ -1,11 +1,11 @@
+#pragma once
 #include <array>
-#include <list>
-#include <unordered_set>
 #include <cassert>
 #include <iostream>
-#include <bitset>
+#include <list>
+#include <limits>
+#include <unordered_set>
 #include "triangle.hpp"
-
 
 namespace Algorithm
 {
@@ -142,6 +142,10 @@ namespace Algorithm
                 printf("}\n");
             }
 
+            const auto get_set() {
+                return intersected;
+            }
+
         private:
             const size_t max_n_iter = 4;
             const Geomentry::Vec3 min_;
@@ -150,6 +154,7 @@ namespace Algorithm
             Node_t* root;
             std::vector<size_t> current_sequence;
             std::unordered_set<size_t> intersected;
+
             void select_oct(AABB& aabb_cell, size_t octant) 
             {
                 auto disp = (aabb_cell.max_ - aabb_cell.min_) * 0.5;
@@ -168,10 +173,11 @@ namespace Algorithm
                     aabb_cell.max_[d] += need_disp[d] * disp[d];
                 }
             }
+
             void iteration(AABB& aabb_cell, const AABB& aabb_triangle, size_t tr_idx, Node_t* node, size_t n_iter) {
 
-                // Главный реузльтат этого участка кода: битовая
-                // маска октантов, в которой находится треугольник
+                // The main result of lines below is bitmask of
+                // octants, that consist current triangle.
                 auto center = (aabb_cell.max_ + aabb_cell.min_) * 0.5;
 
                 OctMask octmask;
@@ -188,11 +194,8 @@ namespace Algorithm
                     octmask.and_op(mask, d);
                 }
 
-                std::bitset<8> b(octmask.mask_);
-                std::cout << b << std::endl;
-
-                // Если нашелся октант, в который данный треугольник помещается полностью,
-                // то тупо запускаем рекурсивно спуск дальше
+                // If we find an octant so big for covering triangle
+                // Just run a new iteration
                 auto non_zero_bits = octmask.non_zero_bits();
                 if(non_zero_bits == 1 && n_iter < max_n_iter) {
                     for(size_t i = 0; i < 8; i++)
@@ -206,15 +209,13 @@ namespace Algorithm
                 }
 
                 if(non_zero_bits == 8) {
-                    // все октанты заняты данным треугольником, т.е.
-                    // просто добавляем его в список текущего нода
+                    // All octants include the triangle
+                    // Just append its index in the list of current node
                     node->triangle_idx.push_front(tr_idx);
                     return;
                 }
 
-                // в противном случае мы не можем точно сказать в каком именно октанте
-                // находится треугольник и мы сообщаем всем детям, что в них располагается
-                // треугольник
+                // Overwise tell all childs about existing triangle
                 auto& childs = node->childs;
                 for(int m = octmask.mask_, child_idx = 0; m; m >>= 1, child_idx++) {
                     if((m & 1) == 0) continue; 
@@ -224,22 +225,24 @@ namespace Algorithm
                     child->triangle_idx.push_front(tr_idx);
                 }
             }
+
             void check_intersection() {
                 for(size_t i = 0; i + 1 < current_sequence.size(); i++)
                 for(size_t j = i + 1; j < current_sequence.size(); j++) {
+                    std::cout << "Check inter " << current_sequence.size() << std::endl;
                     bool is_intersected =
                         triangles_[i].intersected(triangles_[j]);
                     if(is_intersected) {
                         intersected.insert(i);
                         intersected.insert(j);
+                        std::cout << i << " " << j << std::endl;
                     }
                 }
             }
+
             void DFS_impl(Node_t* root) {
-                if(root == nullptr) {
-                    check_intersection();
+                if(root == nullptr)
                     return;
-                }
 
                 // добавляем новые треугольники
                 size_t appended = 0;
@@ -249,14 +252,20 @@ namespace Algorithm
                 }
 
                 // заходим в рекурсию
+                size_t null_childs = 0;
                 for(auto& child : root->childs) {
                     DFS_impl(child);
+                    null_childs += child == nullptr;
                 }
+
+                if(null_childs == 8)
+                    check_intersection();
 
                 // после обработки вершины удаляем все добавленные треугольники
                 for(size_t i = 0; i < appended; i++)
                     current_sequence.pop_back();
             }
+
             void clean_up(Node_t* node) {
                 if(node == nullptr)
                     return;

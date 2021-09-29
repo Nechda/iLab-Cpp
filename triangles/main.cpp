@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
-#include "triangle.hpp"
 #include "octree.hpp"
+#include "triangle.hpp"
 
 using namespace Geomentry;
 
@@ -20,9 +20,29 @@ void print(const Triangle& t) {
     std::cout << "}\n";
 }
 
+void tr_intersection_tests() {
+    size_t N = 2;
+    std::vector<Geomentry::Triangle> trs(N);
+    for(auto& tr : trs) {
+        for(auto v : {0,1,2})
+        for(auto d : {0,1,2})
+            std::cin >> tr[v][d];
+    }
 
+    bool res = Geomentry::is_intersected_impl(trs[0],trs[1]);
+    bool ans = 0;
+    std::cin >> ans;
+    if(ans != res)
+        std::cout << "Failed\n";
+    else
+        std::cout << "Ok\n";
+
+}
 
 int main() {
+
+    tr_intersection_tests();
+    return 0;
 
     // ввод данных
     size_t N = 0;
@@ -58,6 +78,14 @@ int main() {
 
     // проходимя по нему через dfs
     tree.DFS();
+
+    std::cout << "Intersected triangles {" << std::endl;
+    auto set = tree.get_set();
+    for(const auto& it : set) {
+        std::cout << it << " " ;
+    }
+    std::cout << "}" << std::endl;
+
 
     return 0;
 }
