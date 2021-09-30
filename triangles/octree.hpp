@@ -135,7 +135,7 @@ struct Octree {
     const std::unordered_set<size_t> get_set() { return intersected; }
 
 private:
-    const size_t max_n_iter = 4;
+    const size_t max_n_iter = 17;
     const Geomentry::Vec3 min_;
     const Geomentry::Vec3 max_;
     const std::vector<Geomentry::Triangle> &triangles_;
