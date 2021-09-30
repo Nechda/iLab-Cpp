@@ -1,0 +1,5 @@
+.clang-format
+.vscode
+build_*
+*.out
+*.png
