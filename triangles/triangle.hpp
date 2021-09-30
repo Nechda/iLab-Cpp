@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <cstddef>
+#include <initializer_list>
 #include <math.h>
 
 namespace Geomentry {

@@ -4,6 +4,6 @@ project(iLab-triangles)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS "-w -g")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -g")
 
 add_executable(triangles main.cpp)

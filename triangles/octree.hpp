@@ -6,6 +6,7 @@
 #include <limits>
 #include <list>
 #include <unordered_set>
+#include <vector>
 
 namespace Algorithm {
 struct OctMask {
@@ -13,9 +14,9 @@ struct OctMask {
 
     void and_op(bool mask[2], int dim) {
         assert(0 <= dim && dim < 3);
-        char dim_mask[] = {mask[1] * 0b11001100 + mask[0] * 0b00110011,
-                           mask[1] * 0b01100110 + mask[0] * 0b10011001,
-                           mask[1] * 0b11110000 + mask[0] * 0b00001111};
+        int dim_mask[] = {mask[1] * 0b11001100 + mask[0] * 0b00110011,
+                          mask[1] * 0b01100110 + mask[0] * 0b10011001,
+                          mask[1] * 0b11110000 + mask[0] * 0b00001111};
         mask_ &= dim_mask[dim];
     }
 
@@ -32,8 +33,8 @@ struct OctMask {
 };
 
 struct AABB {
-    Geomentry::Vec3 max_;
     Geomentry::Vec3 min_;
+    Geomentry::Vec3 max_;
 
     AABB(const Geomentry::Triangle &t) {
         for (auto i : {0, 1, 2}) {
@@ -74,7 +75,7 @@ struct Octree {
     Octree() = delete;
     Octree(Geomentry::Vec3 min, Geomentry::Vec3 max,
            std::vector<Geomentry::Triangle> &trs)
-        : min_(min), max_(max), root(nullptr), triangles_(trs) {
+        : min_(min), max_(max), triangles_(trs), root(nullptr) {
         root = new Node_t;
     }
 
@@ -147,8 +148,8 @@ private:
         auto new_max = aabb_cell.min_ + disp;
         aabb_cell.max_ = new_max;
 
-        bool need_disp[3] = {((octant + 0) >> 1) & 1, ((octant + 1) >> 1) & 1,
-                             octant > 3};
+        size_t need_disp[3] = {((octant + 0) >> 1) & 1, ((octant + 1) >> 1) & 1,
+                               octant > 3};
 
         Geomentry::Vec3 offset;
         for (auto d : {0, 1, 2}) {
