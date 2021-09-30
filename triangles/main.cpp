@@ -20,7 +20,7 @@ void print(const Triangle &t) {
     std::cout << "}\n";
 }
 
-void tr_intersection_tests() {
+int tr_intersection_tests() {
     size_t N = 2;
     std::vector<Geomentry::Triangle> trs(N);
     for (auto &tr : trs) {
@@ -36,14 +36,15 @@ void tr_intersection_tests() {
         std::cout << "Failed\n";
     else
         std::cout << "Ok\n";
+
+    return ans != res;
 }
 
 int main() {
-
-    // tr_intersection_tests();
-    // return 0;
-
-    // ввод данных
+#ifdef INTERSECTED_FUNCTION_TEST
+    return tr_intersection_tests();;
+#else
+    // take data from stdin
     size_t N = 0;
     std::cin >> N;
     std::vector<Geomentry::Triangle> trs(N);
@@ -53,7 +54,7 @@ int main() {
                 std::cin >> tr[v][d];
     }
 
-    // поиск области, в которой лежат треугольники
+    // find an area where located all triangles
     Geomentry::Vec3 min;
     Geomentry::Vec3 max;
     for (auto &tr : trs) {
@@ -64,24 +65,18 @@ int main() {
             }
     }
 
-    // print(min);
-    // print(max);
-
-    // закидываем в дерево октантов треугольники
+    // create tree
     Algorithm::Octree tree(min, max, trs);
     for (size_t i = 0; i < N; i++)
         tree.insert(trs[i], i);
 
-    // tree.dump();
-
-    // проходимя по нему через dfs
+    // dfs
     tree.DFS();
 
-    // std::cout << "Intersected triangles {" << std::endl;
     auto set = tree.get_set();
     for (const auto &it : set)
         std::cout << it << " ";
-    // std::cout << "}" << std::endl;
 
     return 0;
+#endif
 }

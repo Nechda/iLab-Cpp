@@ -232,14 +232,14 @@ private:
         if (root == nullptr)
             return;
 
-        // добавляем новые треугольники
+        // add new triangles
         size_t appended = 0;
         for (auto idx : root->triangle_idx) {
             appended++;
             current_sequence.push_back(idx);
         }
 
-        // заходим в рекурсию
+        // go into new recursion interation
         size_t null_childs = 0;
         for (auto &child : root->childs) {
             DFS_impl(child);
@@ -249,7 +249,7 @@ private:
         if (null_childs == 8)
             check_intersection();
 
-        // после обработки вершины удаляем все добавленные треугольники
+        // after vertex processing delete all added triangles
         for (size_t i = 0; i < appended; i++)
             current_sequence.pop_back();
     }
