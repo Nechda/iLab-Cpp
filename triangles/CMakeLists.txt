@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-Wall -Werror -g")
 
-add_executable(triangles main.cpp)
+add_executable(triangles main.cpp triangle.cpp)
 
-add_executable(tester main.cpp)
+add_executable(tester main.cpp triangle.cpp)
 set_target_properties(tester PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DINTERSECTED_FUNCTION_TEST")
 
 find_program(BASH_PROGRAM bash)

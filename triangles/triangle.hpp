@@ -141,13 +141,12 @@ struct Segment {
     }
 };
 
-struct Triangle;
-namespace {
-bool is_intersected_impl(const Triangle &a, const Triangle &b);
-}
-
 struct Triangle {
     Vec3 v[3] = {};
+
+    Vec3 &operator[](size_t i) { return v[i % 3]; }
+
+    const Vec3 &operator[](size_t i) const { return v[i % 3]; }
 
     Vec3 get_normal() const {
         Vec3 v_0 = v[1] - v[0];
@@ -157,88 +156,24 @@ struct Triangle {
         return n;
     }
 
-    bool intersected(const Triangle &lhs) const {
-        const auto &rhs = *this;
-        return is_intersected_impl(rhs, lhs);
+    bool intersected(const Triangle &lhs) const;
+
+    bool is_point_in_trianle(const Vec3 &v) const {
+        const auto &tr = *this;
+        auto qp = v - tr[0];
+        auto n = tr.get_normal();
+        auto v1 = tr[1] - tr[0];
+        auto v2 = tr[2] - tr[0];
+        auto v1_orth = n ^ v1;
+        auto v2_orth = n ^ v2;
+
+        auto lambda1 = (qp * v2_orth) / (v1 * v2_orth);
+        auto lambda2 = (qp * v1_orth) / (v2 * v1_orth);
+
+        return lambda1 >= 0 && lambda2 >= 0 && (lambda1 + lambda2) <= 1;
     }
-
-    Vec3 &operator[](size_t i) { return v[i % 3]; }
-
-    const Vec3 &operator[](size_t i) const { return v[i % 3]; }
 };
 
-namespace {
+bool is_intersected_impl(const Triangle &a, const Triangle &b);
 
-inline bool is_point_in_trianle(const Vec3 &v, const Triangle &tr) {
-    auto qp = v - tr[0];
-    auto n = tr.get_normal();
-    auto v1 = tr[1] - tr[0];
-    auto v2 = tr[2] - tr[0];
-    auto v1_orth = n ^ v1;
-    auto v2_orth = n ^ v2;
-
-    auto lambda1 = (qp * v2_orth) / (v1 * v2_orth);
-    auto lambda2 = (qp * v1_orth) / (v2 * v1_orth);
-
-    return lambda1 >= 0 && lambda2 >= 0 && (lambda1 + lambda2) <= 1;
-}
-
-bool is_intersected(const Segment &seg, const Triangle &tr) {
-    auto n = tr.get_normal();
-    auto v = seg[1] - seg[0];
-    auto q = tr[0];
-    auto p = seg[0];
-    auto qp = p - q;
-    auto alpha = -(qp * n) / (v * n);
-
-    // vector qp --- from triangle vertex to segment vertex
-    if (!(0 <= alpha && alpha <= 1))
-        return false;
-
-    // vector qp --- from triangle vertex to point into triangle's plane
-    qp = qp + v * alpha;
-
-    // barycentric based test for checking intersectiong between point and
-    // triangle
-    return is_point_in_trianle(qp + tr[0], tr);
-}
-
-inline bool is_intersected_proto(const Triangle &a, const Triangle &b) {
-    Segment s0{a[0], a[1]};
-    Segment s1{a[1], a[2]};
-    Segment s2{a[2], a[0]};
-    return is_intersected(s0, b) || is_intersected(s1, b) ||
-           is_intersected(s2, b);
-}
-
-bool is_intersected_impl(const Triangle &a, const Triangle &b) {
-    auto n = a.get_normal();
-    auto cross_normals = n ^ b.get_normal();
-    auto normal_length_sqr = cross_normals * cross_normals;
-    if (normal_length_sqr < EPSILON) {
-        auto dist = abs(n * (a[0] - b[0]));
-        if (dist < EPSILON) {
-            bool answ = false;
-
-            for (int i = 0; i < 3 && !answ; i++) {
-                answ |= is_point_in_trianle(a[i], b);
-                answ |= is_point_in_trianle(b[i], a);
-            }
-
-            for (int i = 0; i < 3 && !answ; i++)
-                for (int j = 0; j < 3 && !answ; j++) {
-#define at(idx_) ((idx_) % 3)
-                    Segment s0{a[at(i)], a[at(i + 1)]};
-                    Segment s1{b[at(j)], b[at(j + 1)]};
-                    answ |= s0.intersected(s1);
-#undef at
-                }
-
-            return answ;
-        }
-        return false;
-    }
-    return is_intersected_proto(a, b) || is_intersected_proto(b, a);
-}
-} // namespace
 } // namespace Geomentry

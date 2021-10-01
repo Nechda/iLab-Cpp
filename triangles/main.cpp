@@ -42,7 +42,8 @@ int tr_intersection_tests() {
 
 int main() {
 #ifdef INTERSECTED_FUNCTION_TEST
-    return tr_intersection_tests();;
+    return tr_intersection_tests();
+    ;
 #else
     // take data from stdin
     size_t N = 0;

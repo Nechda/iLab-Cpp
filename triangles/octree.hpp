@@ -217,13 +217,10 @@ private:
     void check_intersection() {
         for (size_t i = 0; i + 1 < current_sequence.size(); i++)
             for (size_t j = i + 1; j < current_sequence.size(); j++) {
-                std::cout << "Check inter " << current_sequence.size()
-                          << std::endl;
                 bool is_intersected = triangles_[i].intersected(triangles_[j]);
                 if (is_intersected) {
                     intersected.insert(i);
                     intersected.insert(j);
-                    std::cout << i << " " << j << std::endl;
                 }
             }
     }
