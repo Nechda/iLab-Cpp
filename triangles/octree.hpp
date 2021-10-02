@@ -6,6 +6,7 @@
 #include <limits>
 #include <list>
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 namespace Algorithm {
@@ -69,6 +70,7 @@ struct AABB {
 struct Node_t {
     std::array<Node_t *, 8U> childs = {};
     std::list<size_t> triangle_idx;
+    size_t n_trs = 0;
 };
 
 struct Octree {
@@ -77,6 +79,7 @@ struct Octree {
            std::vector<Geomentry::Triangle> &trs)
         : min_(min), max_(max), triangles_(trs), root(nullptr) {
         root = new Node_t;
+        was_intersected.resize(trs.size());
     }
 
     void insert(const Geomentry::Triangle &t, size_t tr_idx = 0) {
@@ -132,16 +135,16 @@ struct Octree {
         printf("}\n");
     }
 
-    const std::unordered_set<size_t> get_set() { return intersected; }
+    const std::vector<bool> get_set() { return was_intersected; }
 
 private:
     const size_t max_n_iter = 17;
+    const size_t max_n_elem = 8;
     const Geomentry::Vec3 min_;
     const Geomentry::Vec3 max_;
     const std::vector<Geomentry::Triangle> &triangles_;
+    std::vector<bool> was_intersected;
     Node_t *root;
-    std::vector<size_t> current_sequence;
-    std::unordered_set<size_t> intersected;
 
     void select_oct(AABB &aabb_cell, size_t octant) {
         auto disp = (aabb_cell.max_ - aabb_cell.min_) * 0.5;
@@ -158,9 +161,8 @@ private:
         }
     }
 
-    void iteration(AABB &aabb_cell, const AABB &aabb_triangle, size_t tr_idx,
+    void insert_imlp(AABB &aabb_cell, const AABB &aabb_triangle, size_t tr_idx,
                    Node_t *node, size_t n_iter) {
-
         // The main result of lines below is bitmask of
         // octants, that consist current triangle.
         auto center = (aabb_cell.max_ + aabb_cell.min_) * 0.5;
@@ -179,62 +181,80 @@ private:
             octmask.and_op(mask, d);
         }
 
-        // If we find an octant so big for covering triangle
-        // Just run a new iteration
         auto non_zero_bits = octmask.non_zero_bits();
-        if (non_zero_bits == 1 && n_iter < max_n_iter) {
-            for (size_t i = 0; i < 8; i++)
+
+        if(non_zero_bits == 0) return;
+
+        auto aabb_save = aabb_cell;
+        if (n_iter < max_n_iter) {
+            for (size_t i = 0; i < 8; i++) {
                 if (octmask.get_bit(i)) {
+                    aabb_cell = aabb_save;
                     select_oct(aabb_cell, i);
                     node->childs[i] =
                         node->childs[i] ? node->childs[i] : new Node_t;
                     auto next_node = node->childs[i];
                     iteration(aabb_cell, aabb_triangle, tr_idx, next_node,
                               n_iter + 1);
-                    return;
                 }
+            }
         }
 
-        if (non_zero_bits == 8) {
-            // All octants include the triangle
-            // Just append its index in the list of current node
+        node->triangle_idx.push_front(tr_idx);
+    }
+
+    void iteration(AABB &aabb_cell, const AABB &aabb_triangle, size_t tr_idx,
+                   Node_t *node, size_t n_iter) {
+
+        node->n_trs++;
+        if (node->n_trs < max_n_elem || n_iter >= max_n_iter) {
             node->triangle_idx.push_front(tr_idx);
             return;
         }
 
-        // Overwise tell all childs about existing triangle
-        auto &childs = node->childs;
-        for (int m = octmask.mask_, child_idx = 0; m; m >>= 1, child_idx++) {
-            if ((m & 1) == 0)
-                continue;
-            childs[child_idx] =
-                childs[child_idx] ? childs[child_idx] : new Node_t;
-            auto child = childs[child_idx];
-            child->triangle_idx.push_front(tr_idx);
+        if(node->n_trs == max_n_elem) {
+            AABB save_cell = aabb_cell;
+            for(auto idx : node->triangle_idx) {
+                AABB aabb_triangle_tmp = AABB(triangles_[idx]);
+                save_cell = aabb_cell;
+                insert_imlp(save_cell, aabb_triangle_tmp, idx, node, n_iter);
+            }
+            save_cell = aabb_cell;
+            insert_imlp(aabb_cell, aabb_triangle, tr_idx, node, n_iter);
+            node->triangle_idx.clear();
+            return;
         }
+
+        // recursive insertion
+        insert_imlp(aabb_cell, aabb_triangle, tr_idx, node, n_iter);
     }
 
-    void check_intersection() {
-        for (size_t i = 0; i + 1 < current_sequence.size(); i++)
+    void check_intersection(Node_t *root) {
+        static std::vector<size_t> current_sequence(max_n_elem);
+        current_sequence.resize(0);
+        for(auto it : root->triangle_idx)
+            current_sequence.push_back(it);
+
+        for (size_t i = 0; i + 1 < current_sequence.size(); i++) {
             for (size_t j = i + 1; j < current_sequence.size(); j++) {
-                bool is_intersected = triangles_[i].intersected(triangles_[j]);
+                auto tr_idx_0 = current_sequence[i];
+                auto tr_idx_1 = current_sequence[j];
+
+                if(was_intersected[tr_idx_0] && was_intersected[tr_idx_1])
+                    continue;
+
+                bool is_intersected = triangles_[tr_idx_0].intersected(triangles_[tr_idx_1]);
                 if (is_intersected) {
-                    intersected.insert(i);
-                    intersected.insert(j);
+                    was_intersected[tr_idx_0] = 1;
+                    was_intersected[tr_idx_1] = 1;
                 }
             }
+        }
     }
 
     void DFS_impl(Node_t *root) {
         if (root == nullptr)
             return;
-
-        // add new triangles
-        size_t appended = 0;
-        for (auto idx : root->triangle_idx) {
-            appended++;
-            current_sequence.push_back(idx);
-        }
 
         // go into new recursion interation
         size_t null_childs = 0;
@@ -244,11 +264,7 @@ private:
         }
 
         if (null_childs == 8)
-            check_intersection();
-
-        // after vertex processing delete all added triangles
-        for (size_t i = 0; i < appended; i++)
-            current_sequence.pop_back();
+            check_intersection(root);
     }
 
     void clean_up(Node_t *node) {

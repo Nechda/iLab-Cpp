@@ -43,7 +43,6 @@ int tr_intersection_tests() {
 int main() {
 #ifdef INTERSECTED_FUNCTION_TEST
     return tr_intersection_tests();
-    ;
 #else
     // take data from stdin
     size_t N = 0;
@@ -56,8 +55,8 @@ int main() {
     }
 
     // find an area where located all triangles
-    Geomentry::Vec3 min;
-    Geomentry::Vec3 max;
+    Geomentry::Vec3 min = trs[0][0];
+    Geomentry::Vec3 max = trs[0][0];
     for (auto &tr : trs) {
         for (auto d : {0, 1, 2})
             for (auto v : {0, 1, 2}) {
@@ -66,7 +65,6 @@ int main() {
             }
     }
 
-    // create tree
     Algorithm::Octree tree(min, max, trs);
     for (size_t i = 0; i < N; i++)
         tree.insert(trs[i], i);
@@ -75,9 +73,9 @@ int main() {
     tree.DFS();
 
     auto set = tree.get_set();
-    for (const auto &it : set)
-        std::cout << it << " ";
-
+    for (size_t i = 0; i < N; i++)
+        if(set[i])
+            std::cout << i << std::endl;
     return 0;
 #endif
 }
