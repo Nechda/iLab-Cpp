@@ -13,26 +13,16 @@
 
 namespace caches
 {
-    class ICache {
-        public:
-            ICache() = delete;
-            ICache(size_t sz) : size_(sz) {};
-            virtual bool look_update(int key) = 0;
-            ~ICache() = default;
-        protected:
-            size_t size_;
-    };
-
-
-    class LRU_t : public ICache {
+    class LRU_t{
         public:
             LRU_t(const LRU_t&) = delete;
-            LRU_t(size_t size) : ICache(size) {}
+            LRU_t(size_t size) : size_(size) {}
             
-            bool look_update(int key) override;
+            bool look_update(int key);
 
             ~LRU_t() = default;
         private:
+            size_t size_;
             using ListIt_t = typename std::list<int>::iterator;
             std::list<int> cache_;
             std::unordered_map<int, ListIt_t> hash_;
@@ -41,15 +31,15 @@ namespace caches
     }; 
 
     template <typename Key_t, typename Val_t>
-    class LFU_t : public ICache {
+    class LFU_t {
         public:
             LFU_t(const LRU_t&) = delete;
             LFU_t(size_t size) :
-                ICache(size), min_freq_(1),
+                size_(size), min_freq_(1),
                 n_elemets_(0)
             {}
             
-            bool look_update(Key_t key) override {
+            bool look_update(Key_t key) {
                 if(hash_map_.find(key) != hash_map_.end()) {
                     auto it = hash_map_[key];
                     auto freq = it->freq++;
@@ -99,6 +89,7 @@ namespace caches
                 Val_t val;
                 size_t freq;
             };
+            size_t size_;
             size_t min_freq_;
             size_t n_elemets_;
 
@@ -108,22 +99,23 @@ namespace caches
             std::unordered_map<size_t, List_t> freq_map_;
     }; 
 
-    class perfect_t : public ICache {
+    class perfect_t {
         public:
             perfect_t(const perfect_t&) = delete;
             perfect_t(size_t size, std::vector<int>& req) :
-                ICache(size),
+                size_(size),
                 req_(req)
             {}
             
-            bool look_update(int key) override;
+            bool look_update(int key);
 
             size_t misses_amount() const;
 
             ~perfect_t() = default;
         private:
-            using Cache_table_t = std::unordered_set<int>;
+            size_t size_;
             std::vector<int> req_;
+            using Cache_table_t = std::unordered_set<int>;
             size_t misses_at_current_cache(const Cache_table_t& table, size_t from) const;
     };
 
