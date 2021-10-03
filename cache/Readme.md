@@ -13,3 +13,10 @@ Also there are several end to end testing cases. You can launch them by the comm
 
         make end_to_end_testing
 After this command in your building directory appears new dir called **t**, where you can find files for e2e testing.
+## From developer notes
+Me at 2:37 AM. trying to implement perfect caching algorithm:
+
+
+<p align="center">
+  <img src="res/cat-typing.gif"/>
+</p>

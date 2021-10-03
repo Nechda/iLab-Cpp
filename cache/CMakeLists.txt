@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-Wall -Werror -g")
 
-set(SRC main.cpp perfect_cache.cpp LRU.cpp LFU.cpp)
+set(SRC main.cpp)
 macro(add_define tar def)
     set_target_properties(${tar} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -D${def}")
 endmacro()

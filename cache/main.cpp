@@ -39,7 +39,7 @@ void test_perfect_cache() {
 
     size_t N_tests = sizeof(tests)/sizeof(tests[0]);
     for(size_t i = 0; i < N_tests; i++) {
-        caches::perfect_t cache(tests[i].N, tests[i].req);
+        caches::perfect_t<int, int> cache(tests[i].N, tests[i].req);
         size_t answ = cache.misses_amount();
         if(answ != tests[i].answ) {
             print_test_title(i+1, N_tests, 0);
@@ -115,7 +115,7 @@ void cache_comparison() {
     std::cout << "Cache comparison (misses)" << std::endl;
     size_t N_tests = sizeof(tests)/sizeof(tests[0]);
     for(size_t i = 0; i < N_tests; i++) {
-        caches::perfect_t cache_0(tests[i].N, tests[i].req);
+        caches::perfect_t<int, int> cache_0(tests[i].N, tests[i].req);
         caches::LFU_t<int, int> cache_1(tests[i].N);
 
         size_t misses_0 = cache_0.misses_amount();
@@ -156,7 +156,7 @@ int main() {
         std::vector<int> req(req_amount);
         for(auto& r : req)
             std::cin >> r;
-        caches::perfect_t cache(cache_size, req);
+        caches::perfect_t<int, int> cache(cache_size, req);
         size_t hits = req_amount - cache.misses_amount();
         std::cout << hits << std::endl;
     #endif
