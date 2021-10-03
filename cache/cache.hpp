@@ -26,7 +26,6 @@ namespace caches
 
     class LRU_t : public ICache {
         public:
-            LRU_t() = delete;
             LRU_t(const LRU_t&) = delete;
             LRU_t(size_t size) : ICache(size) {}
             
@@ -44,7 +43,6 @@ namespace caches
     template <typename Key_t, typename Val_t>
     class LFU_t : public ICache {
         public:
-            LFU_t() = delete;
             LFU_t(const LRU_t&) = delete;
             LFU_t(size_t size) :
                 ICache(size), min_freq_(1),
@@ -85,7 +83,7 @@ namespace caches
                 return false;
             }
 
-            void dump() {
+            void dump() const {
                 for(auto& f : freq_map_) {
                     std::cout << f.first << "\n";
                     for(auto& it : f.second)
@@ -112,7 +110,6 @@ namespace caches
 
     class perfect_t : public ICache {
         public:
-            perfect_t() = delete;
             perfect_t(const perfect_t&) = delete;
             perfect_t(size_t size, std::vector<int>& req) :
                 ICache(size),

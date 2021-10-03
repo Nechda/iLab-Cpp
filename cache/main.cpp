@@ -136,7 +136,7 @@ int main() {
         test_perfect_cache();
         test_LFU_cache();
         cache_comparison();
-    #else
+    #elif LFU
         size_t cache_size = 0;
         size_t req_amount = 0;
         std::cin >> cache_size >> req_amount;
@@ -148,6 +148,16 @@ int main() {
             std::cin >> req;
             hits += cache.look_update(req);
         }
+        std::cout << hits << std::endl;
+    #elif PERFECT
+        size_t cache_size = 0;
+        size_t req_amount = 0;
+        std::cin >> cache_size >> req_amount;
+        std::vector<int> req(req_amount);
+        for(auto& r : req)
+            std::cin >> r;
+        caches::perfect_t cache(cache_size, req);
+        size_t hits = req_amount - cache.misses_amount();
         std::cout << hits << std::endl;
     #endif
     return 0;

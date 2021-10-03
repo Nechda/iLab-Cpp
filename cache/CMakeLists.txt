@@ -6,7 +6,23 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-Wall -Werror -g")
 
-add_executable(cache main.cpp perfect_cache.cpp LRU.cpp LFU.cpp)
+set(SRC main.cpp perfect_cache.cpp LRU.cpp LFU.cpp)
+macro(add_define tar def)
+    set_target_properties(${tar} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -D${def}")
+endmacro()
 
-add_executable(tester main.cpp perfect_cache.cpp LRU.cpp LFU.cpp)
-set_target_properties(tester PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DTESTS")
+add_executable(cache ${SRC})
+add_define(cache "LFU")
+
+add_executable(perfect ${SRC})
+add_define(perfect "PERFECT")
+
+add_executable(tester ${SRC})
+add_define(tester "TESTS")
+
+find_program(CMAKE_PROGRAM cmake)
+add_custom_target(
+    end_to_end_testing
+    COMMAND ${CMAKE_PROGRAM} -P "${CMAKE_SOURCE_DIR}/t/CMakeLists.txt"
+)
+add_dependencies(end_to_end_testing cache)
