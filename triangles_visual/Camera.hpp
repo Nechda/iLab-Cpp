@@ -1,27 +1,12 @@
-#include <GLFW/glfw3.h>
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
+#pragma once
+
+#include "Lowering/window.hpp"
+
 #include <iostream>
 #include <algorithm>
 
-struct WindowInfo {
-    friend class Application;
-    private:
-        WindowInfo() :
-            descriptor(nullptr),
-            height(0),
-            width(0)
-        {};
-        static WindowInfo win_info;
-    public:
-        static const WindowInfo& Instance() {
-            return win_info;
-        }
-
-        GLFWwindow* descriptor;
-        unsigned height;
-        unsigned width;
-};
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
 
 struct Camera {
 

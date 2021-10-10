@@ -22,6 +22,7 @@
 #include "Octree/triangle.hpp"
 
 #include "Camera.hpp"
+#include "Lowering/window.hpp"
 
 WindowInfo WindowInfo::win_info;
 
