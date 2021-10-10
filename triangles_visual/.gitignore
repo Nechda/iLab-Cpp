@@ -1,5 +1,8 @@
 *.out
 *.sh
 *.gch
-shaders/*
 *.in
+*.o
+*.obj
+shaders/*
+Lowering/t.cpp

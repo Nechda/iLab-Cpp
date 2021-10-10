@@ -24,6 +24,14 @@ struct WindowInfo {
             }
         }
 
+        VkExtent2D getExtent() {
+            return {width, height};
+        }
+
+        bool shouldClose() {
+            return glfwWindowShouldClose(descriptor);
+        }
+
         GLFWwindow* descriptor;
         unsigned height;
         unsigned width;
