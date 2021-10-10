@@ -1,4 +1,5 @@
 #include "pipeline.hpp"
+#include "Mesh.hpp"
 
 #include <fstream>
 #include <cassert>
@@ -152,13 +153,13 @@ namespace Vulkan {
             vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
             // TODO: SHOULD_ENABLE
-            //auto bindingDescription = Vertex::getBindingDescription();
-            //auto attributeDescriptions = Vertex::getAttributeDescriptions();
+            auto bindingDescription = Mesh::Vertex::getBindingDescription();
+            auto attributeDescriptions = Mesh::Vertex::getAttributeDescriptions();
 
-            vertexInputInfo.vertexBindingDescriptionCount = 0;//1;
-            vertexInputInfo.vertexAttributeDescriptionCount = 0;//static_cast<uint32_t>(attributeDescriptions.size());
-            vertexInputInfo.pVertexBindingDescriptions = nullptr;//&bindingDescription;
-            vertexInputInfo.pVertexAttributeDescriptions = nullptr;//attributeDescriptions.data();
+            vertexInputInfo.vertexBindingDescriptionCount = 1;
+            vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+            vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+            vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
     
             // TODO: SHOULD_ENABLE
             VkGraphicsPipelineCreateInfo pipelineInfo{};

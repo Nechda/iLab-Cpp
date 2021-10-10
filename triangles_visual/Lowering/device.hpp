@@ -44,7 +44,6 @@ namespace Vulkan {
         VkFormat findSupportedFormat(
             const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
-        /*
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
         
         // Buffer Helper Functions
@@ -57,6 +56,8 @@ namespace Vulkan {
         VkCommandBuffer beginSingleTimeCommands();
         void endSingleTimeCommands(VkCommandBuffer commandBuffer);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+        /*
         void copyBufferToImage(
             VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t layerCount);
 
