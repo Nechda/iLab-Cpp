@@ -1,0 +1,5 @@
+*.out
+*.sh
+*.gch
+shaders/*
+*.in
