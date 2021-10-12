@@ -1,21 +1,59 @@
 #include "SwapChain.hpp"
 
 #include <algorithm>
+#include <memory>
 
 namespace Vulkan {
 
 SwapChain::SwapChain(Device &device, VkExtent2D extent) : 
-    device_(device), windowExtent(extent) {
-        createSwapChain();  // done
-        createImageViews(); // done
-        createRenderPass(); // done
-        createDepthResources();
-        createFramebuffers(); // done
-        createSyncObjects(); // done
-    }
+device_(device), windowExtent(extent) {
+    init();
+}
+
+SwapChain::SwapChain(Device &device, VkExtent2D extent, std::shared_ptr<SwapChain> previous) : 
+device_(device), windowExtent(extent), oldSwapChain(previous) {
+    init();
+    oldSwapChain = nullptr;
+}
+
+void SwapChain::init() {
+    createSwapChain();  // done
+    createImageViews(); // done
+    createRenderPass(); // done
+    createDepthResources(); // done
+    createFramebuffers(); // done
+    createSyncObjects(); // done
+}
 
 SwapChain::~SwapChain() {
-    // cleanup
+    for (auto imageView : swapChainImageViews) {
+        vkDestroyImageView(device_.device(), imageView, nullptr);
+    }
+    swapChainImageViews.clear();
+
+    if (swapChain != nullptr) {
+        vkDestroySwapchainKHR(device_.device(), swapChain, nullptr);
+        swapChain = nullptr;
+    }
+
+    for (int i = 0; i < depthImages.size(); i++) {
+        vkDestroyImageView(device_.device(), depthImageViews[i], nullptr);
+        vkDestroyImage(device_.device(), depthImages[i], nullptr);
+        vkFreeMemory(device_.device(), depthImageMemorys[i], nullptr);
+    }
+
+    for (auto framebuffer : swapChainFramebuffers) {
+        vkDestroyFramebuffer(device_.device(), framebuffer, nullptr);
+    }
+
+    vkDestroyRenderPass(device_.device(), renderPass, nullptr);
+
+    // cleanup synchronization objects
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(device_.device(), renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(device_.device(), imageAvailableSemaphores[i], nullptr);
+        vkDestroyFence(device_.device(), inFlightFences[i], nullptr);
+    }
 }
 
 VkResult SwapChain::acquireNextImage(uint32_t *imageIndex) {
@@ -79,14 +117,6 @@ VkResult SwapChain::submitCommandBuffers(const VkCommandBuffer *buffers, uint32_
 
     auto result = vkQueuePresentKHR(device_.presentQueue(), &presentInfo);
 
-    // TODO: SHOULD_ENABLED
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR /*|| framebufferResized*/) {
-        //framebufferResized = false;
-        //recreateSwapChain();
-    } else if (result != VK_SUCCESS) {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     return result;
@@ -123,7 +153,7 @@ VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilit
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     } else {
-        // TODO: SHOULD_ENABLE
+        // TODO: SHOULD_ENABLE (FIXED)
         /*
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
@@ -134,7 +164,6 @@ VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilit
             static_cast<uint32_t>(height)
         };
         */
-
         VkExtent2D actualExtent = windowExtent;
 
         actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
@@ -182,6 +211,8 @@ void SwapChain::createSwapChain() {
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
+
+    createInfo.oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapChain;
 
     if (vkCreateSwapchainKHR(device_.device(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
@@ -306,10 +337,50 @@ void SwapChain::createRenderPass() {
 
 void SwapChain::createDepthResources() {
     VkFormat depthFormat = findDepthFormat();
+    VkExtent2D swapChainExtent = getSwapChainExtent();
 
-    // TODO: SHOULD_ENABLED
-    //createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-    //depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    depthImages.resize(imageCount());
+    depthImageMemorys.resize(imageCount());
+    depthImageViews.resize(imageCount());
+
+    for (int i = 0; i < depthImages.size(); i++) {
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width = swapChainExtent.width;
+        imageInfo.extent.height = swapChainExtent.height;
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.format = depthFormat;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.flags = 0;
+
+        device_.createImageWithInfo(
+            imageInfo,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            depthImages[i],
+            depthImageMemorys[i]);
+
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = depthImages[i];
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = depthFormat;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(device_.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture image view!");
+        }
+    }
 }
 
     /*

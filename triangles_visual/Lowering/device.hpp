@@ -26,9 +26,15 @@ namespace Vulkan {
         Device(WindowInfo &window);
         ~Device();
 
+        VkDebugUtilsMessengerEXT debugMessenger;
+        static constexpr bool enableValidationLayers = false;
+        void setupDebugMessenger();
+        bool checkValidationLayerSupport();
+        void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
+
         // Not copyable or movable
         Device(const Device &) = delete;
-        void operator=(const Device &) = delete;
+        Device &operator=(const Device &) = delete;
         Device(Device &&) = delete;
         Device &operator=(Device &&) = delete;
 
@@ -57,15 +63,16 @@ namespace Vulkan {
         void endSingleTimeCommands(VkCommandBuffer commandBuffer);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-        /*
-        void copyBufferToImage(
-            VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t layerCount);
-
         void createImageWithInfo(
             const VkImageCreateInfo &imageInfo,
             VkMemoryPropertyFlags properties,
             VkImage &image,
-            VkDeviceMemory &imageMemory);
+            VkDeviceMemory &imageMemory
+        );
+
+        /*
+        void copyBufferToImage(
+            VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t layerCount);
 
         VkPhysicalDeviceProperties properties;
         */
@@ -95,6 +102,7 @@ namespace Vulkan {
         VkQueue graphicsQueue_;
         VkQueue presentQueue_;
 
+        const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
         const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     };
 } // namespace Vulkan

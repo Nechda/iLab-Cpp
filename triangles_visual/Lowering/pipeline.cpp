@@ -52,18 +52,15 @@ namespace Vulkan {
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
-        //TODO: SHOULD_ENABLED
+        //TODO: SHOULD_ENABLED  (FIXED)
+        /*
+            So, it solved: width and height are real params of
+            window, and they are passed by function recreateSwapChain
+        */
         //VkRect2D scissor{};
         scissor.offset = {0, 0};
         //scissor.extent = swapChainExtent;
         scissor.extent = {width, height};
-
-        //VkPipelineViewportStateCreateInfo viewportState{};
-        viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        viewportState.viewportCount = 1;
-        viewportState.pViewports = &viewport;
-        viewportState.scissorCount = 1;
-        viewportState.pScissors = &scissor;
 
         //VkPipelineRasterizationStateCreateInfo rasterizer{};
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -102,16 +99,6 @@ namespace Vulkan {
         colorBlending.blendConstants[1] = 0.0f;
         colorBlending.blendConstants[2] = 0.0f;
         colorBlending.blendConstants[3] = 0.0f;
-
-        //TODO: SHOULD_ENABLED
-        //VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        //pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        //pipelineLayoutInfo.setLayoutCount = 1;
-        //pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-
-        //if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        //    throw std::runtime_error("failed to create pipeline layout!");
-        //}
     }
 
     PipelineConfigInfo Pipeline::defaultPipelineConfigInfo(uint32_t width, uint32_t height) {
@@ -130,29 +117,30 @@ namespace Vulkan {
             assert(configInfo.renderPass != VK_NULL_HANDLE);
 
             /* Process shaders */
-            auto vertCode = readFile(vertFilePath);
-            auto fragCode = readFile(fragFilePath);
-            createShaderModule(vertCode, &vertShaderModule);
-            createShaderModule(fragCode, &fragShaderModule);
+            auto vertShaderCode = readFile("vert.spv");
+            auto fragShaderCode = readFile("frag.spv");
 
-            VkPipelineShaderStageCreateInfo shaderStages[2];
-            auto& vertShaderStageInfo = shaderStages[0];
+            createShaderModule(vertShaderCode, &vertShaderModule);
+            createShaderModule(fragShaderCode, &fragShaderModule);
+
+            VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
             vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
             vertShaderStageInfo.module = vertShaderModule;
             vertShaderStageInfo.pName = "main";
 
-            auto& fragShaderStageInfo = shaderStages[1];
+            VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
             fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             fragShaderStageInfo.module = fragShaderModule;
             fragShaderStageInfo.pName = "main";
 
-            /* Saya GPU about structure of our data */
+            VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+            /* Say GPU about structure of our data */
             VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
             vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-            // TODO: SHOULD_ENABLE
             auto bindingDescription = Mesh::Vertex::getBindingDescription();
             auto attributeDescriptions = Mesh::Vertex::getAttributeDescriptions();
 
@@ -161,24 +149,28 @@ namespace Vulkan {
             vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
             vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
     
-            // TODO: SHOULD_ENABLE
+            VkPipelineViewportStateCreateInfo viewportState{};
+            viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+            viewportState.viewportCount = 1;
+            viewportState.pViewports = &configInfo.viewport;
+            viewportState.scissorCount = 1;
+            viewportState.pScissors = &configInfo.scissor;
+
             VkGraphicsPipelineCreateInfo pipelineInfo{};
             pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
             pipelineInfo.stageCount = 2;
             pipelineInfo.pStages = shaderStages;
             pipelineInfo.pVertexInputState = &vertexInputInfo;
             pipelineInfo.pInputAssemblyState = &configInfo.inputAssembly;
-            pipelineInfo.pViewportState = &configInfo.viewportState;
+            pipelineInfo.pViewportState = &viewportState;
             pipelineInfo.pRasterizationState = &configInfo.rasterizer;
             pipelineInfo.pMultisampleState = &configInfo.multisampling;
             pipelineInfo.pDepthStencilState = &configInfo.depthStencil;
             pipelineInfo.pColorBlendState = &configInfo.colorBlending;
             pipelineInfo.layout = configInfo.pipelineLayout;
             pipelineInfo.renderPass = configInfo.renderPass;
-            pipelineInfo.subpass = configInfo.subpass;
-
+            pipelineInfo.subpass = 0;
             pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-            pipelineInfo.basePipelineIndex = -1;
 
             if (vkCreateGraphicsPipelines(device_.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create graphics pipeline!");

@@ -9,7 +9,6 @@ namespace Vulkan {
     struct PipelineConfigInfo{
         VkViewport viewport;
         VkRect2D scissor;
-        VkPipelineViewportStateCreateInfo viewportState;
         VkPipelineInputAssemblyStateCreateInfo inputAssembly;
         VkPipelineRasterizationStateCreateInfo rasterizer;
         VkPipelineMultisampleStateCreateInfo multisampling;
@@ -34,7 +33,7 @@ namespace Vulkan {
             ~Pipeline();
 
             Pipeline(const Pipeline&) = delete;
-            void operator=(const Pipeline&) = delete;
+            Pipeline& operator=(const Pipeline&) = delete;
 
             void bind(VkCommandBuffer commandBuffer);
 

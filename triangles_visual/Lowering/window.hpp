@@ -1,38 +1,29 @@
 #pragma once
 
-#ifndef GLFW_INCLUDE_VULKAN
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#endif
 
 #include <stdexcept>
 
 struct WindowInfo {
-        WindowInfo() :
-                descriptor(nullptr),
-                height(0),
-                width(0)
-            {};
+    public:
+        WindowInfo(int w, int h) : width(w), height(h) {initWindow();};
         static WindowInfo win_info;
-        static WindowInfo& Instance() {
-            return win_info;
-        }
+        static WindowInfo& Instance() { return win_info; }
 
-        void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface_ptr) {
-            if (glfwCreateWindowSurface(instance, descriptor, nullptr, surface_ptr) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create window surface!");
-            }
-        }
 
-        VkExtent2D getExtent() {
-            return {width, height};
-        }
+        void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface_ptr);
 
-        bool shouldClose() {
-            return glfwWindowShouldClose(descriptor);
-        }
+        VkExtent2D getExtent() { return {width, height}; }
+        bool shouldClose() { return glfwWindowShouldClose(descriptor); }
+        bool wasWindowResized() { return framebufferResized; }
+        void resetWindowResizedFlag() { framebufferResized = false; } 
 
-        GLFWwindow* descriptor;
-        unsigned height;
-        unsigned width;
+        GLFWwindow* descriptor = nullptr;
+        unsigned height = 0;
+        unsigned width = 0;
+        bool framebufferResized = false;
+    private:
+        void initWindow();
+        static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
 };
