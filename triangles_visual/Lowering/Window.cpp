@@ -1,4 +1,6 @@
-#include "window.hpp"
+#include "Window.hpp"
+
+WindowInfo *WindowInfo::instance_ptr = nullptr;
 
 void WindowInfo::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
     auto win_info = reinterpret_cast<WindowInfo *>(glfwGetWindowUserPointer(window));
@@ -8,7 +10,8 @@ void WindowInfo::framebufferResizeCallback(GLFWwindow *window, int width, int he
 }
 
 void WindowInfo::initWindow() {
-    if(instance_ptr != nullptr) return;
+    if (instance_ptr != nullptr)
+        return;
 
     glfwInit();
 
@@ -16,14 +19,13 @@ void WindowInfo::initWindow() {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     descriptor = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
-    //glfwSetInputMode(descriptor, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetInputMode(descriptor, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     glfwSetWindowUserPointer(descriptor, this);
     glfwSetFramebufferSizeCallback(descriptor, framebufferResizeCallback);
 
     instance_ptr = this;
 }
-
 
 void WindowInfo::createWindowSurface(VkInstance instance, VkSurfaceKHR *surface_ptr) {
     if (glfwCreateWindowSurface(instance, descriptor, nullptr, surface_ptr) != VK_SUCCESS) {

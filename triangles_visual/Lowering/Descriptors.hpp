@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device.hpp"
+#include "Device.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -57,7 +57,7 @@ public:
     };
 
     DescriptorPool(Device &Device, uint32_t maxSets, VkDescriptorPoolCreateFlags poolFlags,
-                      const std::vector<VkDescriptorPoolSize> &poolSizes);
+                   const std::vector<VkDescriptorPoolSize> &poolSizes);
     ~DescriptorPool();
     DescriptorPool(const DescriptorPool &) = delete;
     DescriptorPool &operator=(const DescriptorPool &) = delete;

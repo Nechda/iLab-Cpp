@@ -1,7 +1,6 @@
 #include "Descriptors.hpp"
 
 #include <cassert>
-#include <stdexcept>
 
 namespace Vulkan {
 
@@ -70,7 +69,7 @@ std::unique_ptr<DescriptorPool> DescriptorPool::Builder::build() const {
 // *************** Descriptor Pool *********************
 
 DescriptorPool::DescriptorPool(Device &device, uint32_t maxSets, VkDescriptorPoolCreateFlags poolFlags,
-                                     const std::vector<VkDescriptorPoolSize> &poolSizes)
+                               const std::vector<VkDescriptorPoolSize> &poolSizes)
     : device_{device} {
     VkDescriptorPoolCreateInfo descriptorPoolInfo{};
     descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -87,7 +86,7 @@ DescriptorPool::DescriptorPool(Device &device, uint32_t maxSets, VkDescriptorPoo
 DescriptorPool::~DescriptorPool() { vkDestroyDescriptorPool(device_.device(), descriptorPool, nullptr); }
 
 bool DescriptorPool::allocateDescriptor(const VkDescriptorSetLayout descriptorSetLayout,
-                                           VkDescriptorSet &descriptor) const {
+                                        VkDescriptorSet &descriptor) const {
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
