@@ -8,6 +8,8 @@ void WindowInfo::framebufferResizeCallback(GLFWwindow *window, int width, int he
 }
 
 void WindowInfo::initWindow() {
+    if(instance_ptr != nullptr) return;
+
     glfwInit();
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -18,6 +20,8 @@ void WindowInfo::initWindow() {
 
     glfwSetWindowUserPointer(descriptor, this);
     glfwSetFramebufferSizeCallback(descriptor, framebufferResizeCallback);
+
+    instance_ptr = this;
 }
 
 

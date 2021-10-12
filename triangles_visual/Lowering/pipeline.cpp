@@ -9,7 +9,9 @@ namespace Vulkan {
         std::ifstream file(filepath, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
-            throw std::runtime_error("failed to open file!");
+            std::string long_info = "failed to open file = ";
+            long_info.append(filepath);
+            throw std::runtime_error(long_info.c_str());
         }
 
         size_t fileSize = (size_t) file.tellg();
@@ -52,14 +54,8 @@ namespace Vulkan {
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
-        //TODO: SHOULD_ENABLED  (FIXED)
-        /*
-            So, it solved: width and height are real params of
-            window, and they are passed by function recreateSwapChain
-        */
         //VkRect2D scissor{};
         scissor.offset = {0, 0};
-        //scissor.extent = swapChainExtent;
         scissor.extent = {width, height};
 
         //VkPipelineRasterizationStateCreateInfo rasterizer{};
@@ -117,8 +113,8 @@ namespace Vulkan {
             assert(configInfo.renderPass != VK_NULL_HANDLE);
 
             /* Process shaders */
-            auto vertShaderCode = readFile("vert.spv");
-            auto fragShaderCode = readFile("frag.spv");
+            auto vertShaderCode = readFile(vertFilePath);
+            auto fragShaderCode = readFile(fragFilePath);
 
             createShaderModule(vertShaderCode, &vertShaderModule);
             createShaderModule(fragShaderCode, &fragShaderModule);
