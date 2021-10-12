@@ -4,5 +4,6 @@
 *.in
 *.o
 *.obj
+*.spv
 shaders/*
 Lowering/t.cpp

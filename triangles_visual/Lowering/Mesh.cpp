@@ -1,4 +1,5 @@
 #include "Mesh.hpp"
+#include "buffer.hpp"
 #include <memory.h>
 
 namespace Vulkan {
@@ -6,36 +7,40 @@ Mesh::Mesh(Device &device, const std::vector<Vertex> &vertices) : device_(device
     createVertexBuffers(vertices);
 }
 
-Mesh::~Mesh() {
-    vkDestroyBuffer(device_.device(), vertexBuffer, nullptr);
-    vkFreeMemory(device_.device(), vertexBufferMemory, nullptr);
-}
+Mesh::~Mesh() {}
 
 void Mesh::createVertexBuffers(const std::vector<Vertex> &vertices) {
     vertexCount = vertices.size();
     assert(vertexCount >= 3);
 
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
+    uint32_t vertexSize = sizeof(vertices[0]);
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    device_.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    Buffer stagingBuffer(
+        device_,
+        vertexSize,
+        vertexCount,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
 
-    void* data;
-    vkMapMemory(device_.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(device_.device(), stagingBufferMemory);
+    stagingBuffer.map();
+    stagingBuffer.writeToBuffer((void*)vertices.data());
 
-    device_.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    vertexBuffer = std::make_unique<Buffer>(
+        device_,
+        vertexSize,
+        vertexCount,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
 
-    device_.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
-    vkDestroyBuffer(device_.device(), stagingBuffer, nullptr);
-    vkFreeMemory(device_.device(), stagingBufferMemory, nullptr);
+    device_.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 }
 
 void Mesh::bind(VkCommandBuffer commandBuffer) {
-    VkBuffer buffers[] = {vertexBuffer};
+    VkBuffer buffers[] = {vertexBuffer->getBuffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 }

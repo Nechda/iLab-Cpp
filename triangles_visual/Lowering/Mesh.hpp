@@ -1,10 +1,12 @@
 #pragma once
 
 #include "device.hpp"
+#include "buffer.hpp"
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <array>
+#include <memory>
 
 namespace Vulkan {
     class Mesh {
@@ -31,7 +33,7 @@ namespace Vulkan {
             void createVertexBuffers(const std::vector<Vertex> &vertices);
 
             Device &device_;
-            VkBuffer vertexBuffer;
+            std::unique_ptr<Buffer> vertexBuffer;
             VkDeviceMemory vertexBufferMemory;
             uint32_t vertexCount;
     };

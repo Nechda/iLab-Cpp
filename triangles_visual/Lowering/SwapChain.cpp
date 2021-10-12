@@ -153,17 +153,6 @@ VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilit
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     } else {
-        // TODO: SHOULD_ENABLE (FIXED)
-        /*
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        
-
-        VkExtent2D actualExtent = {
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height)
-        };
-        */
         VkExtent2D actualExtent = windowExtent;
 
         actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
