@@ -19,7 +19,7 @@ void WindowInfo::initWindow() {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     descriptor = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
-    // glfwSetInputMode(descriptor, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(descriptor, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     glfwSetWindowUserPointer(descriptor, this);
     glfwSetFramebufferSizeCallback(descriptor, framebufferResizeCallback);

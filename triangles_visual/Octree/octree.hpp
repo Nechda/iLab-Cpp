@@ -95,7 +95,7 @@ struct Octree {
 
     void DFS() { DFS_impl(root); }
 
-    void dump_node(Node_t *node) {
+    void dump_node(Node_t *node) const {
         if (!node)
             return;
 

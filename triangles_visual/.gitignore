@@ -6,5 +6,4 @@
 *.obj
 *.spv
 *.py
-shaders/*
 Lowering/t.cpp

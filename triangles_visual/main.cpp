@@ -214,7 +214,7 @@ void App::createPipeline() {
     auto pipelineConfig = Vulkan::Pipeline::defaultPipelineConfigInfo(swapChain->width(), swapChain->height());
     pipelineConfig.renderPass = swapChain->getRenderPass();
     pipelineConfig.pipelineLayout = pipelineLayout;
-    pipeline = std::make_unique<Vulkan::Pipeline>(device, "shaders/vert.spv", "shaders/frag.spv", pipelineConfig);
+    pipeline = std::make_unique<Vulkan::Pipeline>(device, "shader.vert.glsl.spv", "shader.frag.glsl.spv", pipelineConfig);
 }
 
 void App::createCommandBuffers() {
