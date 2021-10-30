@@ -1,4 +1,5 @@
 #include "triangle.hpp"
+#include <cmath>
 
 namespace Geomentry {
 static bool is_intersected(const Segment &seg, const Triangle &tr) {
@@ -34,7 +35,7 @@ bool is_intersected_impl(const Triangle &a, const Triangle &b) {
     auto cross_normals = n ^ b.get_normal();
     auto normal_length_sqr = cross_normals * cross_normals;
     if (normal_length_sqr < EPSILON) {
-        auto dist = abs(n * (a[0] - b[0]));
+        auto dist = std::fabs(n * (a[0] - b[0]));
         if (dist < EPSILON) {
             bool answ = false;
 

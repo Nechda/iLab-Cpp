@@ -29,6 +29,7 @@ struct SceneInfo {
 } global_scene_info;
 
 std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
+#ifndef __NO_FILE__
     size_t N = 0;
     std::cin >> N;
     std::vector<Geomentry::Triangle> trs(N);
@@ -37,6 +38,22 @@ std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
             for (auto d : {0, 1, 2})
                 std::cin >> tr[v][d];
     }
+#else
+    size_t N = 1000;
+    auto random = []() { return ((rand() % 1000 / 1000.0f) - 0.5)*2; };
+    auto rand_vec = [&](const float R) {return R * glm::vec3(random(), random(), random()); };
+
+    std::vector<Geomentry::Triangle> trs(N);
+    for (auto &tr : trs) {
+        auto tmp_vec = rand_vec(50.0f);
+        for (auto v : { 0, 1, 2 }) {
+            auto disp = rand_vec(1.0f);
+            for (auto d : { 0, 1, 2 }) {
+                tr[v][d] = tmp_vec[d] + disp[d];
+            }
+        }
+    }
+#endif
 
     // find an area where located all triangles
     Geomentry::Vec3 min = trs[0][0];
@@ -152,7 +169,7 @@ void App::run() {
     /* Create descriptors sets for accessing to UBO object in shaders */
     globalDescriptorSets.resize(Vulkan::SwapChain::MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < globalDescriptorSets.size(); i++) {
-        auto bufferInfo = sceneUBOBuffer[i]->descriptorInfoForIndex(i);
+        auto bufferInfo = sceneUBOBuffer[i]->descriptorInfo();
         Vulkan::DescriptorWriter(*globalSetLayout, *globalPool)
             .writeBuffer(0, &bufferInfo)
             .build(globalDescriptorSets[i]);
@@ -211,7 +228,8 @@ void App::recreateSwapChain() {
 }
 
 void App::createPipeline() {
-    auto pipelineConfig = Vulkan::Pipeline::defaultPipelineConfigInfo(swapChain->width(), swapChain->height());
+    Vulkan::PipelineConfigInfo pipelineConfig{};
+    Vulkan::Pipeline::defaultPipelineConfigInfo(pipelineConfig);
     pipelineConfig.renderPass = swapChain->getRenderPass();
     pipelineConfig.pipelineLayout = pipelineLayout;
     pipeline = std::make_unique<Vulkan::Pipeline>(device, "shader.vert.glsl.spv", "shader.frag.glsl.spv", pipelineConfig);
@@ -222,11 +240,12 @@ void App::createCommandBuffers() {
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = device.getCommandPool();
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+    allocInfo.commandPool = device.getCommandPool();
+    allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-    if (vkAllocateCommandBuffers(device.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device.device(), &allocInfo, commandBuffers.data()) !=
+        VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
@@ -243,17 +262,27 @@ void App::recordCommandBuffer(int imageIndex) {
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = swapChain->getRenderPass();
     renderPassInfo.framebuffer = swapChain->getFrameBuffer(imageIndex);
-    renderPassInfo.renderArea.offset = {0, 0};
+
+    renderPassInfo.renderArea.offset = { 0, 0 };
     renderPassInfo.renderArea.extent = swapChain->getSwapChainExtent();
 
     std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil = {1.0f, 0};
-
+    clearValues[0].color = { 0.01f, 0.01f, 0.01f, 1.0f };
+    clearValues[1].depthStencil = { 1.0f, 0 };
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffers[imageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(swapChain->getSwapChainExtent().width);
+    viewport.height = static_cast<float>(swapChain->getSwapChainExtent().height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    VkRect2D scissor{ {0, 0}, swapChain->getSwapChainExtent() };
+    vkCmdSetViewport(commandBuffers[imageIndex], 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &scissor);
 
     pipeline->bind(commandBuffers[imageIndex]);
     vkCmdBindDescriptorSets(commandBuffers[imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,

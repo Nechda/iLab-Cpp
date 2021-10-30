@@ -9,7 +9,7 @@
 namespace Vulkan {
 class SwapChain {
 public:
-    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+    static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
     SwapChain(Device &device, VkExtent2D windowExtent);
     SwapChain(Device &device, VkExtent2D windowExtent, std::shared_ptr<SwapChain> previous);
@@ -23,7 +23,7 @@ public:
     VkRenderPass getRenderPass() { return renderPass; }
     // VkImageView getImageView(int index) { return swapChainImageViews[index]; }
     size_t imageCount() { return swapChainImages.size(); }
-    // VkFormat getSwapChainImageFormat() { return swapChainImageFormat; }
+    VkFormat getSwapChainImageFormat() { return swapChainImageFormat; }
     VkExtent2D getSwapChainExtent() { return swapChainExtent; }
     uint32_t width() { return swapChainExtent.width; }
     uint32_t height() { return swapChainExtent.height; }

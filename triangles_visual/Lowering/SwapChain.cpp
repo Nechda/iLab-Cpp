@@ -1,6 +1,7 @@
 #include "SwapChain.hpp"
 
 #include <algorithm>
+#include <array>
 #include <memory>
 
 namespace Vulkan {
@@ -28,9 +29,9 @@ SwapChain::~SwapChain() {
     }
     swapChainImageViews.clear();
 
-    if (swapChain != nullptr) {
+    if (swapChain != 0) {
         vkDestroySwapchainKHR(device_.device(), swapChain, nullptr);
-        swapChain = nullptr;
+        swapChain = 0;
     }
 
     for (int i = 0; i < depthImages.size(); i++) {
@@ -157,8 +158,9 @@ void SwapChain::createSwapChain() {
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
     VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+    uint32_t imageCount = std::min(MAX_FRAMES_IN_FLIGHT, (uint32_t)swapChainSupport.capabilities.minImageCount + 1);
+    if (swapChainSupport.capabilities.maxImageCount > 0 &&
+        imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
@@ -213,23 +215,20 @@ void SwapChain::createImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
 
     for (size_t i = 0; i < swapChainImages.size(); i++) {
-        VkImageViewCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = swapChainImages[i];
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = swapChainImageFormat;
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = swapChainImages[i];
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = swapChainImageFormat;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(device_.device(), &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create image views!");
+        if (vkCreateImageView(device_.device(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
+            VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture image view!");
         }
     }
 }
@@ -364,9 +363,9 @@ void SwapChain::createDepthResources() {
 */
 
 void SwapChain::createFramebuffers() {
-    swapChainFramebuffers.resize(swapChainImageViews.size());
+    swapChainFramebuffers.resize(imageCount());
 
-    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+    for (size_t i = 0; i < imageCount(); i++) {
         std::array<VkImageView, 2> attachments = {swapChainImageViews[i], depthImageViews[i]};
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -393,8 +392,8 @@ void SwapChain::createFramebuffers() {
 void SwapChain::createSyncObjects() {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-    imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+    inFlightFences.resize(imageCount());
+    imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -403,7 +402,7 @@ void SwapChain::createSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < imageCount(); i++) {
         if (vkCreateSemaphore(device_.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(device_.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(device_.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {

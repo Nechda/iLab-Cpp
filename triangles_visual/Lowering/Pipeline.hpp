@@ -7,19 +7,22 @@
 
 namespace Vulkan {
 struct PipelineConfigInfo {
-    VkViewport viewport;
-    VkRect2D scissor;
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly;
-    VkPipelineRasterizationStateCreateInfo rasterizer;
-    VkPipelineMultisampleStateCreateInfo multisampling;
-    VkPipelineColorBlendAttachmentState colorBlendAttachment;
-    VkPipelineColorBlendStateCreateInfo colorBlending;
-    VkPipelineDepthStencilStateCreateInfo depthStencil;
-    VkPipelineLayout pipelineLayout = nullptr;
-    VkRenderPass renderPass = nullptr;
-    uint32_t subpass = 0;
+    PipelineConfigInfo() = default;
+    PipelineConfigInfo(const PipelineConfigInfo&) = delete;
+    PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
 
-    void init_default(uint32_t width, uint32_t height);
+    VkPipelineViewportStateCreateInfo viewportInfo;
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
+    VkPipelineRasterizationStateCreateInfo rasterizationInfo;
+    VkPipelineMultisampleStateCreateInfo multisampleInfo;
+    VkPipelineColorBlendAttachmentState colorBlendAttachment;
+    VkPipelineColorBlendStateCreateInfo colorBlendInfo;
+    VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+    std::vector<VkDynamicState> dynamicStateEnables;
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+    VkPipelineLayout pipelineLayout = 0;
+    VkRenderPass renderPass = 0;
+    uint32_t subpass = 0;
 };
 
 class Pipeline {
@@ -33,7 +36,7 @@ public:
 
     void bind(VkCommandBuffer commandBuffer);
 
-    static PipelineConfigInfo defaultPipelineConfigInfo(uint32_t width, uint32_t height);
+    static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
 
 private:
     static std::vector<char> readFile(const std::string &filepath);
