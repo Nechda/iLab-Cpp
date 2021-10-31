@@ -57,3 +57,7 @@ python3 gen.py > in
 347
 ./triangles < in
 ```
+# Example
+<p align="center">
+  <img src="intersection.gif"/>
+</p>
