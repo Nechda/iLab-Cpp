@@ -138,8 +138,8 @@ struct Octree {
     const std::vector<bool> get_set() { return was_intersected; }
 
 private:
-    const size_t max_n_iter = 17;
-    const size_t max_n_elem = 8;
+    const size_t max_n_iter = 10;
+    const size_t max_n_elem = 16;
     const Geomentry::Vec3 min_;
     const Geomentry::Vec3 max_;
     const std::vector<Geomentry::Triangle> &triangles_;
