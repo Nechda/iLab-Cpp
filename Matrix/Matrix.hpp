@@ -3,27 +3,34 @@
 #include <cstddef>
 #include <array>
 #include <type_traits>
+#include <boost/rational.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 
 namespace Linagl {
 
     template<size_t N__, size_t M__, typename T>
     struct Mat;
 
+    using Long_number = boost::multiprecision::cpp_int;
+    using Number_ext = boost::rational<Long_number>;
+
     template<size_t N>
-    double det_LUP(Mat<N, N, double> mat) {
+    Number_ext det_LUP(Mat<N, N, Number_ext> mat) {
+
+
         auto& C = mat;
         size_t n_swaps = 0;
 
         for(ssize_t i = 0; i < N; i++) {
-            double pivot_val = -1;
+            Number_ext pivot_val = -1;
             ssize_t pivot = -1;
             for(ssize_t row = i; row < N; row++) {
-                if(std::abs(C[row][i]) > pivot_val) {
-                    pivot_val = std::abs(C[row][i]);
+                if(boost::abs(C[row][i]) > pivot_val) {
+                    pivot_val = boost::abs(C[row][i]);
                     pivot = row;
                 }
             }
-            if(pivot_val < 1e-10)
+            if(!pivot_val)
                 continue;
 
             C.swap_row(pivot, i);
@@ -37,7 +44,7 @@ namespace Linagl {
             }
         }
 
-        double res = n_swaps % 2 == 0 ? 1.0 : -1.0;
+        Number_ext res = n_swaps % 2 == 0 ? 1 : -1;
         for(size_t i = 0; i < N; i++)
             res *= C[i][i];
         return res;
@@ -91,11 +98,8 @@ namespace Linagl {
                 return data_[idx];
             }
 
-            std::enable_if_t<
-                N__ == M__ && std::is_arithmetic<T>::value,
-                double
-            > det() const {
-                return det_LUP(Mat_t<double>(*this));
+            Number_ext det() const {
+                return det_LUP(Mat_t<Number_ext>(*this));
             }
 
             void swap_row(size_t i, size_t j) {

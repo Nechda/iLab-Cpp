@@ -1,30 +1,28 @@
 #include "Matrix.hpp"
 #include <string>
 #include <cmath>
-#include <boost/rational.hpp>
 
 
 
 void t_matrix() {
-    Linagl::Mat<10,10,double> mat;
+    Linagl::Mat<10, 10, long long> mat;
 
     size_t n_tests = 0;
     std::cin >> n_tests;
 
-    while(n_tests--){
-        int det = 0;
+    while(n_tests--) {
+        long long det = 0;
         std::cin >> mat;
         std::cin >> det;
 
-        auto answ = std::round(mat.det());
-        double check = det;
-
-        if(std::abs(answ - det) < 0.01) {
+        auto eval_det = mat.det();
+        decltype(eval_det) correct_det{det};
+        if(eval_det == correct_det) {
             std::cout << "Ok ";
         } else {
-            std::cout << "\n[Fail]\n" << mat;
-            std::cout << "My det = " << answ << std::endl;
-            std::cout << "Correct det = " << det << std::endl;
+            std::cout << "\n[Failed]\n" << mat;
+            std::cout << "Evaluated det = " << eval_det << std::endl;
+            std::cout << "  Correct det = " << correct_det << std::endl;
             break;
         }
     }
