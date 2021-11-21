@@ -5,14 +5,14 @@ void t_matrix() {
     std::cin >> n_tests >> matrix_size;
 
     Linagl::Matrix<int> mat{matrix_size, matrix_size};
-    while(n_tests--) {
+    while (n_tests--) {
         ssize_t det = 0;
         std::cin >> mat;
         std::cin >> det;
 
         auto eval_det = mat.det();
         decltype(eval_det) correct_det{det};
-        if(eval_det == correct_det) {
+        if (eval_det == correct_det) {
             std::cout << "Ok ";
             continue;
         }
