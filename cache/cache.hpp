@@ -17,8 +17,6 @@
 namespace caches {
 template <typename Key_t, typename Val_t> class LRU_t {
 public:
-    LRU_t(const LRU_t<Key_t, Val_t> &) = delete;
-    LRU_t(LRU_t<Key_t, Val_t> &&) = default;
     LRU_t(size_t size) : size_(size) {}
 
     template <typename F> bool look_update(Key_t key, F slow_path) {
@@ -40,8 +38,6 @@ public:
         return true;
     }
 
-    ~LRU_t() = default;
-
 private:
     size_t size_;
     using ListIt_t = typename std::list<Val_t>::iterator;
@@ -53,8 +49,6 @@ private:
 
 template <typename Key_t, typename Val_t> class LFU_t {
 public:
-    LFU_t(const LRU_t<Key_t, Val_t> &) = delete;
-    LFU_t(LFU_t<Key_t, Val_t> &&) = default;
     LFU_t(size_t size) : size_(size), min_freq_(1), n_elemets_(0) {}
 
     template <typename F> bool look_update(Key_t key, F slow_path) {
@@ -100,8 +94,6 @@ public:
         }
     }
 
-    ~LFU_t() = default;
-
 private:
     struct Node_t {
         Key_t key;
@@ -120,8 +112,6 @@ private:
 
 template <typename Key_t, typename Val_t> class perfect_t {
 public:
-    perfect_t(const perfect_t<Key_t, Val_t> &) = delete;
-    perfect_t(perfect_t<Key_t, Val_t> &&) = default;
     perfect_t(size_t size, std::vector<Key_t> &req) : size_(size), current_request_index(0) {
         hits_history_.resize(req.size());
         req_extend_.resize(req.size());
@@ -197,8 +187,6 @@ public:
 
         return total_misses;
     }
-
-    ~perfect_t() = default;
 
 private:
     size_t size_;
