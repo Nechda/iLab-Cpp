@@ -1,8 +1,11 @@
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <iomanip>
 #include <iostream>
 #include <list>
+#include <limits>
 #include <set>
 #include <stack>
 #include <unordered_map>
@@ -119,13 +122,23 @@ template <typename Key_t, typename Val_t> class perfect_t {
 public:
     perfect_t(const perfect_t<Key_t, Val_t> &) = delete;
     perfect_t(perfect_t<Key_t, Val_t> &&) = default;
-    perfect_t(size_t size, std::vector<Key_t> &req) : size_(size), req_(req), current_request_index(0) {
+    perfect_t(size_t size, std::vector<Key_t> &req) : size_(size), current_request_index(0) {  
         hits_history_.resize(req.size());
+        req_extend_.resize(req.size());
+
+        // save key & it's index in sequence
+        for(size_t i = 0; i < req.size(); i++)
+            req_extend_[i] = triple{
+                req[i],
+                i,
+                std::numeric_limits<size_t>::max()
+            };
+
         misses_amount();
     }
 
     bool look_update(Key_t key, Val_t &&val = Val_t()) {
-        if (current_request_index >= req_.size()) {
+        if (current_request_index >= req_extend_.size()) {
             UNRECHEABLE();
             return false;
         }
@@ -134,59 +147,63 @@ public:
     }
 
     size_t misses_amount() {
+        // sorting by key value
+        std::sort(req_extend_.begin(), req_extend_.end(),
+            [](const triple& lhs, const triple& rhs) {
+                bool is_same_key = lhs.key == rhs.key;
+                return is_same_key ? lhs.idx < rhs.idx : lhs.key < rhs.key;
+            }
+        );
+
+        for(size_t i = 0; i + 1 < req_extend_.size(); i++) {
+            if(req_extend_[i].key == req_extend_[i+1].key) {
+                req_extend_[i].next = req_extend_[i+1].idx;
+            }
+        }
+
+        // sorting by idx
+        std::sort(req_extend_.begin(), req_extend_.end(),
+            [](const triple& lhs, const triple& rhs) {
+                return lhs.idx < rhs.idx;
+            }
+        );
+
         Cache_table_t cache_table;
-        size_t N_iterations = req_.size();
+        size_t N_iterations = req_extend_.size();
         size_t total_misses = 0;
-        std::vector<int> cached_keys(size_);
-        cached_keys.resize(0);
 
         for (size_t i = 0; i < N_iterations; i++) {
-            int cur_key = req_[i];
+            int cur_key = req_extend_[i].key;
+
             if (cache_table.count(cur_key) == 1) {
+                cache_table[cur_key] = req_extend_[i].next;
                 hits_history_[i] = 1;
                 continue;
             }
+
             total_misses++;
-            size_t min_misses = -1;
-            size_t tmp_misses = -1;
+            hits_history_[i] = 0;
 
-            // without cache new element
-            tmp_misses = misses_at_current_cache(cache_table, i);
-            min_misses = std::min(min_misses, tmp_misses);
-
-            // transform unordered_set into vector
-            cached_keys.resize(0);
-            for (const auto &it : cache_table)
-                cached_keys.push_back(it);
-
-            // if there is free space just cache a new key
-            if (cached_keys.size() < size_) {
-                cache_table.insert(cur_key);
+            #ifdef DONT_CACHE_SINGLES_PAGES
+            if(req_extend_[i].next == std::numeric_limits<size_t>::max())
                 continue;
+            #endif
+
+            auto remove_key = cur_key;
+            size_t dist = 0;
+            for(const auto& p : cache_table) {
+                if(p.second > dist) {
+                    dist = p.second;
+                    remove_key = p.first;
+                }
             }
 
-            // find the most gainful place in cache table
-            int replaced_key = -1;
-            for (auto key : cached_keys) {
-                cache_table.erase(key);
-                cache_table.insert(cur_key);
+            if(size_ == cache_table.size())
+                cache_table.erase(remove_key);
 
-                tmp_misses = misses_at_current_cache(cache_table, i);
-                if (tmp_misses < min_misses)
-                    replaced_key = key;
-                min_misses = std::min(min_misses, tmp_misses);
-
-                cache_table.erase(cur_key);
-                cache_table.insert(key);
-            }
-
-            // overwise replace item in the cache table
-            if (replaced_key != -1) {
-                cache_table.erase(replaced_key);
-                cache_table.insert(cur_key);
-                continue;
-            }
+            cache_table[cur_key] = req_extend_[i].next;            
         }
+
         return total_misses;
     }
 
@@ -194,17 +211,16 @@ public:
 
 private:
     size_t size_;
-    std::vector<int> req_;
     std::vector<bool> hits_history_;
     size_t current_request_index;
-    using Cache_table_t = std::unordered_set<int>;
-    size_t misses_at_current_cache(const Cache_table_t &table, size_t from) const {
-        size_t hits = 0;
-        size_t N = req_.size();
-        for (size_t i = from; i < N; i++)
-            hits += !table.count(req_[i]);
-        return hits;
-    }
+    using Cache_table_t = std::unordered_map<int, size_t>;
+
+    struct triple {
+        int key;
+        size_t idx;
+        size_t next;
+    };
+    std::vector<triple> req_extend_;
 };
 
 } // namespace caches

@@ -7,18 +7,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-Wall -Werror -g")
 
 set(SRC main.cpp)
-macro(add_define tar def)
-    set_target_properties(${tar} PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -D${def}")
-endmacro()
 
 add_executable(cache ${SRC})
-add_define(cache "LFU")
+target_compile_definitions(cache PRIVATE LFU)
 
 add_executable(perfect ${SRC})
-add_define(perfect "PERFECT")
+target_compile_definitions(perfect PRIVATE PERFECT)
+
+add_executable(incredible ${SRC})
+target_compile_definitions(incredible PRIVATE PERFECT DONT_CACHE_SINGLES_PAGES)
 
 add_executable(tester ${SRC})
-add_define(tester "TESTS")
+target_compile_definitions(tester PRIVATE TESTS DONT_CACHE_SINGLES_PAGES)
 
 find_program(CMAKE_PROGRAM cmake)
 add_custom_target(
