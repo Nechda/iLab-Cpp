@@ -1,30 +1,162 @@
 #pragma once
 #include <iostream>
 #include <cstddef>
-#include <array>
 #include <type_traits>
 #include <boost/rational.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace Linagl {
 
-    template<size_t N__, size_t M__, typename T>
-    struct Mat;
-
     using Long_number = boost::multiprecision::cpp_int;
     using Number_ext = boost::rational<Long_number>;
 
-    template<size_t N>
-    Number_ext det_LUP(Mat<N, N, Number_ext> mat) {
+    template<typename T>
+    struct Matrix;
+    Number_ext det_LUP(Matrix<Number_ext> mat);
 
+    template<typename T>
+    struct Matrix {
+        public:
+            using row_t = T*;
+            template<typename U>
+            using Mat_t = Matrix<U>;
+
+            Matrix(size_t N, size_t M) :
+                Height_(N),
+                Width_(M)
+            {
+                if(N == 0 || M == 0) return;
+
+                data_ = new T[N*M];
+                rows_ = new T*[N];
+                if(rows_ == nullptr || data_ == nullptr) return;
+
+                for(size_t i = 0; i < N; i++)
+                    rows_[i] = &data_[i * M];
+            }
+
+            template<typename U>
+            Matrix(const Mat_t<U>& rhs) :
+                Height_(rhs.get_heigth()),
+                Width_(rhs.get_width())
+            {
+                data_ = new T[Height_ * Width_];
+                rows_ = new T*[Height_];
+                if(rows_ == nullptr || data_ == nullptr) return;
+
+                for(size_t i = 0; i < Height_; i++)
+                for(size_t j = 0; j < Width_; j++)
+                    data_[i * Width_ + j] = static_cast<T>(rhs[i][j]);
+
+                for(size_t i = 0; i < Height_; i++)
+                    rows_[i] = &data_[i * Width_];
+            }
+            Matrix(const Mat_t<T>& rhs) :
+                Height_(rhs.get_heigth()),
+                Width_(rhs.get_width())
+            {
+                data_ = new T[Height_ * Width_];
+                rows_ = new T*[Height_];
+                if(rows_ == nullptr || data_ == nullptr) return;
+
+                std::copy(rhs.data_, rhs.data_ + Height_ * Width_, data_);
+
+                for(size_t i = 0; i < Height_; i++)
+                    rows_[i] = &data_[i * Width_];
+            }
+
+            Matrix(Mat_t<T>&& rhs) :
+                Height_(rhs.get_heigth()),
+                Width_(rhs.get_width())
+            {
+                data_ = rhs.data_;
+                rows_ = rhs.rows_;
+
+                rhs.data_ = nullptr;
+                rhs.rows_ = nullptr;
+            }
+
+            Mat_t<T>& operator=(const Mat_t<T>& rhs) {
+                if(this == &rhs)
+                    return *this;
+
+                delete[] data_;
+                delete[] rows_;
+
+                Height_ = rhs.get_height();
+                Width_ = rhs.get_width();
+
+                data_ = new T[Height_ * Width_];
+                rows_ = new T*[Height_];
+                if(rows_ == nullptr || data_ == nullptr) return *this;
+
+                std::copy(rhs.data_, rhs.data_ + Height_ * Width_, data_);
+                for(size_t i = 0; i < Height_; i++)
+                    rows_[i] = &data_[i * Width_];
+
+                return *this;
+            }
+
+            Mat_t<T>& operator=(Mat_t<T>&& rhs) {
+                if(this == &rhs)
+                    return *this;
+                
+                Height_ = rhs.get_heigth();
+                Width_ = rhs.get_width();
+                data_ = rhs.data_;
+                rows_ = rhs.rows_;
+
+                rhs.data_ = nullptr;
+                rhs.rows_ = nullptr;
+
+                return *this;
+            }
+
+            ~Matrix() {
+                delete[] rows_;
+                delete[] data_;
+
+                rows_ = nullptr;
+                data_ = nullptr;
+            }
+
+            row_t& operator[](size_t idx) {
+                return rows_[idx];
+            }
+            const row_t& operator[](size_t idx) const {
+                return rows_[idx];
+            }
+
+            Number_ext det() const {
+                if(Width_ != Height_)
+                    return Number_ext{};
+                return det_LUP(Mat_t<Number_ext>{*this});
+            }
+
+            void swap_row(size_t i, size_t j) {
+                if(i == j) return;
+                std::swap(rows_[i], rows_[j]);
+            }
+
+            size_t get_width() const {return Width_;}
+            size_t get_heigth() const {return Height_;}
+        private:
+            T* data_ = nullptr;
+            row_t* rows_ = nullptr;
+            const size_t Width_;
+            const size_t Height_;
+    };
+
+    Number_ext det_LUP(Matrix<Number_ext> mat) {
+        const size_t N = mat.get_heigth();
 
         auto& C = mat;
         size_t n_swaps = 0;
 
-        for(ssize_t i = 0; i < N; i++) {
+        for(size_t i = 0; i < N; i++) {
             Number_ext pivot_val = -1;
-            ssize_t pivot = -1;
-            for(ssize_t row = i; row < N; row++) {
+            size_t pivot = -1;
+            for(size_t row = i; row < N; row++) {
                 if(boost::abs(C[row][i]) > pivot_val) {
                     pivot_val = boost::abs(C[row][i]);
                     pivot = row;
@@ -36,11 +168,10 @@ namespace Linagl {
             C.swap_row(pivot, i);
             n_swaps += pivot != i;
 
-            for(ssize_t j = i + 1; j < N; j++) {
+            for(size_t j = i + 1; j < N; j++) {
                 C[j][i] /= C[i][i];
-                for(ssize_t k = i + 1; k < N; k++)
+                for(size_t k = i + 1; k < N; k++)
                     C[j][k] -= C[j][i] * C[i][k];
-            
             }
         }
 
@@ -50,87 +181,21 @@ namespace Linagl {
         return res;
     }
 
-    // impl matrix N x M
-    template<size_t N__, size_t M__, typename T>
-    struct Mat {
-        public:
-            using row_t = std::array<T, M__>;
-            template<typename U>
-            using Mat_t = Mat<N__, M__, U>;
-
-            Mat() {
-                for(auto& row : data_)
-                    row = {};
-            }
-            template<typename U>
-            Mat(const Mat_t<U>& rhs) {
-                for(size_t i = 0; i < N__; i++)
-                for(size_t j = 0; j < M__; j++)
-                    data_[i][j] = static_cast<T>(rhs[i][j]);
-            }
-            Mat(const Mat_t<T>& rhs) {
-                for(size_t i = 0; i < N__; i++)
-                    data_[i] = rhs.data_[i];
-            }
-            Mat(Mat_t<T>&& rhs) {
-                for(size_t i = 0; i < N__; i++)
-                    data_[i] = std::move(rhs.data_[i]);
-            }
-            Mat_t<T>& operator=(const Mat_t<T>& rhs) {
-                if(this == &rhs)
-                    return *this;
-                for(size_t i = 0; i < N__; i++)
-                    data_[i] = rhs.data_[i];
-                return *this;
-            }
-            Mat_t<T>& operator=(Mat_t<T>&& rhs) {
-                if(this == &rhs)
-                    return *this;
-                for(size_t i = 0; i < N__; i++)
-                    data_[i] = std::move(rhs.data_[i]);
-                return *this;
-            }
-            ~Mat() = default;
-            row_t& operator[](size_t idx) {
-                return data_[idx];
-            }
-            const row_t& operator[](size_t idx) const {
-                return data_[idx];
-            }
-
-            Number_ext det() const {
-                return det_LUP(Mat_t<Number_ext>(*this));
-            }
-
-            void swap_row(size_t i, size_t j) {
-                if(i == j) return;
-                std::swap(data_[i], data_[j]);
-            }
-        private:
-            row_t data_[N__];
-
-        template<size_t N_, size_t M_, typename T_>
-        friend std::ostream& operator << (std::ostream& stream, const Mat<N_, M_, T_>& mat);
-        template<size_t N_, size_t M_, typename T_>
-        friend std::istream& operator >> (std::istream& stream, Mat<N_, M_, T_>& mat);
-    };
-
-    template<size_t N_, size_t M_, typename T_>
-    std::ostream& operator << (std::ostream& stream, const Mat<N_, M_, T_>& mat) {
-        for(const auto& row : mat.data_) {
-            for(const auto& it : row)
-                stream << it << " ";
+    template<typename T>
+    std::ostream& operator << (std::ostream& stream, const Matrix<T>& mat) {
+        for(size_t i = 0; i < mat.get_heigth(); i++) {
+            for(size_t j = 0; j < mat.get_width(); j++)
+                stream << mat[i][j] << " ";
             stream << std::endl;
         }
         return stream;
     }
 
-    template<size_t N_, size_t M_, typename T_>
-    std::istream& operator >> (std::istream& stream, Mat<N_, M_, T_>& mat) {
-        for(auto& row : mat.data_) {
-            for(auto& it : row)
-                stream >> it;
-        }
+    template<typename T>
+    std::istream& operator >> (std::istream& stream, Matrix<T>& mat) {
+        for(size_t i = 0; i < mat.get_heigth(); i++)
+            for(size_t j = 0; j < mat.get_width(); j++)
+                stream >> mat[i][j];
         return stream;
     }
 

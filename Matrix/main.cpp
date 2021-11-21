@@ -1,17 +1,12 @@
 #include "Matrix.hpp"
-#include <string>
-#include <cmath>
-
-
 
 void t_matrix() {
-    Linagl::Mat<10, 10, long long> mat;
+    size_t n_tests = 0, matrix_size = 0;
+    std::cin >> n_tests >> matrix_size;
 
-    size_t n_tests = 0;
-    std::cin >> n_tests;
-
+    Linagl::Matrix<int> mat{matrix_size, matrix_size};
     while(n_tests--) {
-        long long det = 0;
+        ssize_t det = 0;
         std::cin >> mat;
         std::cin >> det;
 
@@ -19,15 +14,15 @@ void t_matrix() {
         decltype(eval_det) correct_det{det};
         if(eval_det == correct_det) {
             std::cout << "Ok ";
-        } else {
-            std::cout << "\n[Failed]\n" << mat;
-            std::cout << "Evaluated det = " << eval_det << std::endl;
-            std::cout << "  Correct det = " << correct_det << std::endl;
-            break;
+            continue;
         }
+
+        std::cout << "\n[Failed]\n" << mat;
+        std::cout << "Evaluated det = " << eval_det.numerator() << std::endl;
+        std::cout << "  Correct det = " << correct_det.numerator() << std::endl;
+        break;
     }
 }
-
 
 int main() {
     t_matrix();
