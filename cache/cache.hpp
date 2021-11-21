@@ -4,8 +4,8 @@
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
-#include <list>
 #include <limits>
+#include <list>
 #include <set>
 #include <stack>
 #include <unordered_map>
@@ -21,7 +21,7 @@ public:
     LRU_t(LRU_t<Key_t, Val_t> &&) = default;
     LRU_t(size_t size) : size_(size) {}
 
-    bool look_update(Key_t key, Val_t &&val = Val_t()) {
+    template <typename F> bool look_update(Key_t key, F slow_path) {
         auto hit = hash_.find(key);
 
         if (hit == hash_.end()) {
@@ -29,7 +29,7 @@ public:
                 hash_.erase(cache_.back());
                 cache_.pop_back();
             }
-            cache_.push_front(std::move(val));
+            cache_.push_front(std::move(slow_path(key)));
             hash_[key] = cache_.begin();
             return false;
         }
@@ -57,7 +57,7 @@ public:
     LFU_t(LFU_t<Key_t, Val_t> &&) = default;
     LFU_t(size_t size) : size_(size), min_freq_(1), n_elemets_(0) {}
 
-    bool look_update(Key_t key, Val_t &&val = Val_t()) {
+    template <typename F> bool look_update(Key_t key, F slow_path) {
         if (hash_map_.find(key) != hash_map_.end()) {
             auto it = hash_map_[key];
             auto freq = it->freq++;
@@ -85,7 +85,7 @@ public:
 
         n_elemets_++;
         min_freq_ = 1;
-        freq_map_[min_freq_].push_front(std::move(Node_t{key, std::move(val), min_freq_}));
+        freq_map_[min_freq_].push_front(std::move(Node_t{key, std::move(slow_path(key)), min_freq_}));
         hash_map_[key] = freq_map_[min_freq_].begin();
 
         return false;
@@ -122,22 +122,18 @@ template <typename Key_t, typename Val_t> class perfect_t {
 public:
     perfect_t(const perfect_t<Key_t, Val_t> &) = delete;
     perfect_t(perfect_t<Key_t, Val_t> &&) = default;
-    perfect_t(size_t size, std::vector<Key_t> &req) : size_(size), current_request_index(0) {  
+    perfect_t(size_t size, std::vector<Key_t> &req) : size_(size), current_request_index(0) {
         hits_history_.resize(req.size());
         req_extend_.resize(req.size());
 
         // save key & it's index in sequence
-        for(size_t i = 0; i < req.size(); i++)
-            req_extend_[i] = triple{
-                req[i],
-                i,
-                std::numeric_limits<size_t>::max()
-            };
+        for (size_t i = 0; i < req.size(); i++)
+            req_extend_[i] = triple{req[i], i, std::numeric_limits<size_t>::max()};
 
         misses_amount();
     }
 
-    bool look_update(Key_t key, Val_t &&val = Val_t()) {
+    template <typename F> bool look_update(Key_t key, F slow_path) {
         if (current_request_index >= req_extend_.size()) {
             UNRECHEABLE();
             return false;
@@ -148,25 +144,20 @@ public:
 
     size_t misses_amount() {
         // sorting by key value
-        std::sort(req_extend_.begin(), req_extend_.end(),
-            [](const triple& lhs, const triple& rhs) {
-                bool is_same_key = lhs.key == rhs.key;
-                return is_same_key ? lhs.idx < rhs.idx : lhs.key < rhs.key;
-            }
-        );
+        std::sort(req_extend_.begin(), req_extend_.end(), [](const triple &lhs, const triple &rhs) {
+            bool is_same_key = lhs.key == rhs.key;
+            return is_same_key ? lhs.idx < rhs.idx : lhs.key < rhs.key;
+        });
 
-        for(size_t i = 0; i + 1 < req_extend_.size(); i++) {
-            if(req_extend_[i].key == req_extend_[i+1].key) {
-                req_extend_[i].next = req_extend_[i+1].idx;
+        for (size_t i = 0; i + 1 < req_extend_.size(); i++) {
+            if (req_extend_[i].key == req_extend_[i + 1].key) {
+                req_extend_[i].next = req_extend_[i + 1].idx;
             }
         }
 
         // sorting by idx
         std::sort(req_extend_.begin(), req_extend_.end(),
-            [](const triple& lhs, const triple& rhs) {
-                return lhs.idx < rhs.idx;
-            }
-        );
+                  [](const triple &lhs, const triple &rhs) { return lhs.idx < rhs.idx; });
 
         Cache_table_t cache_table;
         size_t N_iterations = req_extend_.size();
@@ -184,24 +175,24 @@ public:
             total_misses++;
             hits_history_[i] = 0;
 
-            #ifdef DONT_CACHE_SINGLES_PAGES
-            if(req_extend_[i].next == std::numeric_limits<size_t>::max())
+#ifdef DONT_CACHE_SINGLES_PAGES
+            if (req_extend_[i].next == std::numeric_limits<size_t>::max())
                 continue;
-            #endif
+#endif
 
             auto remove_key = cur_key;
             size_t dist = 0;
-            for(const auto& p : cache_table) {
-                if(p.second > dist) {
+            for (const auto &p : cache_table) {
+                if (p.second > dist) {
                     dist = p.second;
                     remove_key = p.first;
                 }
             }
 
-            if(size_ == cache_table.size())
+            if (size_ == cache_table.size())
                 cache_table.erase(remove_key);
 
-            cache_table[cur_key] = req_extend_[i].next;            
+            cache_table[cur_key] = req_extend_[i].next;
         }
 
         return total_misses;

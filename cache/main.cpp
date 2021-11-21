@@ -30,12 +30,13 @@ template <typename K, typename V> struct Make_cache<caches::LFU_t<K, V>> {
 
 template <typename Cache_t, size_t N_tests> void test_cache(Test_t *tests, const char *title_msg) {
     std::cout << title_msg << std::endl;
+    auto slow_path = [](int key) -> int { return key; };
 
     for (size_t i = 0; i < N_tests; i++) {
         Cache_t cache = Make_cache<Cache_t>::get(tests[i]);
         size_t answ = 0;
         for (const auto &it : tests[i].req) {
-            bool hit = cache.look_update(it);
+            bool hit = cache.look_update(it, slow_path);
             answ += !hit;
         }
         if (answ != tests[i].answ) {
@@ -107,9 +108,10 @@ void cache_comparison() {
 
         size_t misses_0 = 0;
         size_t misses_1 = 0;
+        auto slow_path = [](int key) -> int { return key; };
         for (const auto &it : tests[i].req) {
-            misses_0 += !cache_0.look_update(it);
-            misses_1 += !cache_1.look_update(it);
+            misses_0 += !cache_0.look_update(it, slow_path);
+            misses_1 += !cache_1.look_update(it, slow_path);
         }
 
         std::cout << std::setw(8) << "perfect = " << std::setw(3) << misses_0 << std::setw(8)
@@ -126,12 +128,13 @@ int main() {
     size_t req_amount = 0;
     std::cin >> cache_size >> req_amount;
     caches::LFU_t<int, int> cache(cache_size);
+    auto slow_path = [](int key) -> int { return key; };
 
     size_t hits = 0;
     for (size_t i = 0; i < req_amount; i++) {
         int req = 0;
         std::cin >> req;
-        hits += cache.look_update(req);
+        hits += cache.look_update(req, slow_path);
     }
     std::cout << hits << std::endl;
 #elif PERFECT
