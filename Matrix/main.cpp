@@ -24,7 +24,20 @@ void t_matrix() {
     }
 }
 
+void eval_det() {
+    size_t matrix_size;
+    std::cin >> matrix_size;
+
+    Linagl::Matrix<int> mat{matrix_size, matrix_size};
+    std::cin >> mat;
+    std::cout << mat.det().numerator() << std::endl;
+}
+
 int main() {
-    t_matrix();
+    #ifndef TEST
+        eval_det();
+    #else
+        t_matrix();
+    #endif
     return 0;
 }
