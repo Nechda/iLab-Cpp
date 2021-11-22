@@ -10,11 +10,7 @@ namespace Containers {
     class Tree {
         public:
             Tree() {};
-            int count(int key) {
-                //auto pnn = helper_find(key);
-                //return !!pnn.second;
-                return 0;
-            }
+
             void insert(int key) {
                 root = insert_impl(root, key);
             }
@@ -27,26 +23,49 @@ namespace Containers {
                 root = balance_impl(root);
             }
 
+            int upper_bound(int key) {
+                Node* node = root;
+                Node* prev = nullptr;
+                size_t cur_pos = Node::get_count(node->left) + 1;
+                size_t prev_pos = 0;
+
+                do{
+                    if(node->key > key) {
+                        prev = node;
+                        node = node->left;
+                        prev_pos = cur_pos;
+                        cur_pos -= (node ? Node::get_count(node->right) : 0) + 1;
+                        continue;
+                    }
+                    if(node->key < key) {
+                        prev = node;
+                        node = node->right;
+                        prev_pos = cur_pos;
+                        cur_pos += (node ? Node::get_count(node->left) : 0) + 1;
+                        continue;
+                    }
+                }while(node ? node->key != key : 0);
+
+                if(!node) {return prev_pos + (prev->key < key ? 0 : -1);}
+                return cur_pos - 1;
+            }
+
             int nth(int k) {
-                if(k > root->count)
+                if(k > Node::get_count(root))
                     return std::numeric_limits<int>::max();
 
-                static auto safe_get_count = [](const Node* node) -> ssize_t {
-                    return node ? node->count : 0;
-                };
-
                 Node* node = root;
-                size_t cur_pos = safe_get_count(node->left) + 1;
+                size_t cur_pos = Node::get_count(node->left) + 1;
                 do{
                     if(cur_pos > k) {
                         node = node->left;
-                        cur_pos -= safe_get_count(node->right) + 1;
+                        cur_pos -= Node::get_count(node->right) + 1;
                         // now it root of left subtree
                         continue;
                     }
                     if(cur_pos < k) {
                         node = node->right;
-                        cur_pos += safe_get_count(node->left) + 1;
+                        cur_pos += Node::get_count(node->left) + 1;
                         // now it root of right subtree
                         continue;
                     }
@@ -57,11 +76,39 @@ namespace Containers {
 
         private:
             struct Node {
-                int key = 0;
-                ssize_t height = 1;
-                ssize_t count = 1;
-                Node* left = nullptr;
-                Node* right = nullptr;
+                public:
+                    Node(int key_) : key(key_) {};
+                    int key = 0;
+                    
+                    Node* left = nullptr;
+                    Node* right = nullptr;
+
+                    static ssize_t get_height(const Node* this_) {
+                        return this_ ? this_->height : 0;
+                    }
+                    static ssize_t get_count(const Node* this_) {
+                        return this_ ? this_->count : 0;
+                    }
+                    static void fix(Node* this_) {
+                        if(!this_) return;
+
+                        auto& left = this_->left;
+                        auto& right = this_->right;
+
+                        auto left_hegiht = get_height(left);
+                        auto right_height = get_height(right);
+                        auto left_count = get_count(left);
+                        auto right_count = get_count(right);
+
+                        this_->height = std::max(left_hegiht, right_height) + 1;
+                        this_->count = left_count + right_count + 1;
+                    }
+                    static ssize_t height_diff(Node* this_) {
+                        return this_ ? get_height(this_->right) - get_height(this_->left) : 0;
+                    }
+                private:
+                    ssize_t height = 1;
+                    ssize_t count = 1;
             };
             Node* root = nullptr;
 
@@ -71,7 +118,7 @@ namespace Containers {
                 std::cout << prefix;
                 std::cout << (is_left ? "├──(L)" : "└──(R)" );
 
-                std::cout << "{ key = " << node->key << " | " << " count = " << node->count << " }" << std::endl;
+                std::cout << "{ key = " << node->key << " | " << " count = " << Node::get_count(node) << " }" << std::endl;
 
                 print_impl(prefix + (is_left ? "│   " : "    "), node->left, 1);
                 print_impl(prefix + (is_left ? "│   " : "    "), node->right, 0);
@@ -88,34 +135,12 @@ namespace Containers {
                 return balance_impl(root);
             }
 
-            ssize_t get_height(Node* node) {
-                return node ? node->height : 0;
-            }
-            ssize_t get_count(Node* node) {
-                return node ? node->count : 0;
-            }
-            void fix(Node* node) {
-                auto& left = node->left;
-                auto& right = node->right;
-
-                auto left_hegiht = get_height(left);
-                auto right_height = get_height(right);
-                auto left_count = get_count(left);
-                auto right_count = get_count(right);
-
-                node->height = std::max(left_hegiht, right_height) + 1;
-                node->count = left_count + right_count + 1;
-            }
-            ssize_t height_diff(Node* node) {
-                return node ? get_height(node->right) - get_height(node->left) : 0;
-            }
-
             Node* rotate_right(Node* rhs) {
                 Node* lhs = rhs->left;
                 rhs->left = lhs->right;
                 lhs->right = rhs;
-                fix(rhs);
-                fix(lhs);
+                Node::fix(rhs);
+                Node::fix(lhs);
                 return lhs;
             }
 
@@ -123,21 +148,21 @@ namespace Containers {
                 Node* rhs = lhs->right;
                 lhs->right = rhs->left;
                 rhs->left = lhs;
-                fix(rhs);
-                fix(lhs);
+                Node::fix(rhs);
+                Node::fix(lhs);
                 return rhs;
             }
 
             Node* balance_impl(Node* root) {
-                fix(root);
-                auto diff = height_diff(root);
-                if(diff == 2) {
-                    if(height_diff(root->right) < 0)
+                Node::fix(root);
+                auto height_diff = Node::height_diff(root);
+                if(height_diff == 2) {
+                    if(Node::height_diff(root->right) < 0)
                         root->right = rotate_right(root->right);
                     return rotate_left(root);
                 }
-                if(diff == -2) {
-                    if(height_diff(root->left) > 0)
+                if(height_diff == -2) {
+                    if(Node::height_diff(root->left) > 0)
                         root->left = rotate_left(root->left);
                     return rotate_right(root);
                 }
