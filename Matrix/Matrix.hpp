@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <type_traits>
+#include <numeric>
 
 namespace Linagl {
 
@@ -22,75 +23,120 @@ Number_t det_LUP(Matrix<Number_t> mat);
 template <typename T>
 struct Matrix {
   public:
-    using row_t = T *;
+    struct row_t {
+      public:
+        row_t(T* ptr) : ptr_{ptr} {};
+        T& operator[](size_t idx) { return ptr_[idx]; }
+        const T& operator[](size_t idx) const { return ptr_[idx]; }
+      private:
+        T* ptr_;
+    };
     template <typename U>
     using Mat_t = Matrix<U>;
 
     Matrix(size_t N, size_t M) : Height_(N), Width_(M) {
-        auto do_noting = []() {};
-        memory_init(do_noting);
+        if (Height_ == 0 || Width_ == 0)
+            throw std::runtime_error("One or both matrix size are equal zero");
+
+        // operator new cat throw
+        data_ = new T[Height_ * Width_];
+
+        // safe allocate memory for row_permutation_ array
+        try {
+            row_perm_ = new size_t[Height_];
+            std::iota(row_perm_, row_perm_ + Height_, 0);
+        } catch (...) {
+            delete[] data_;
+            throw;
+        }
     }
 
     template <typename U>
     Matrix(const Mat_t<U> &rhs) : Height_(rhs.get_heigth()), Width_(rhs.get_width()) {
-        auto copy_with_cast = [&]() {
+        if (Height_ == 0 || Width_ == 0)
+            throw std::runtime_error("One or both matrix size are equal zero");
+
+        // operator new can throw
+        data_ = new T[Height_ * Width_];
+        try {
+            // catch another exceptions
             for (size_t i = 0; i < Height_; i++)
                 for (size_t j = 0; j < Width_; j++)
                     data_[i * Width_ + j] = static_cast<T>(rhs[i][j]);
-        };
-        memory_init(copy_with_cast);
+        } catch(...) {
+            // clean memory and rethrow
+            delete[] data_;
+            throw;
+        }
+
+        // safe allocate memory for row_permutation_ array
+        try {
+            row_perm_ = new size_t[Height_];
+            std::iota(row_perm_, row_perm_ + Height_, 0);
+        } catch (...) {
+            delete[] data_;
+            throw;
+        }
     }
     Matrix(const Mat_t<T> &rhs) : Height_(rhs.get_heigth()), Width_(rhs.get_width()) {
-        auto raw_copy = [&]() { std::copy(rhs.data_, rhs.data_ + Height_ * Width_, data_); };
-        memory_init(raw_copy);
+        if (Height_ == 0 || Width_ == 0)
+            throw std::runtime_error("One or both matrix size are equal zero");
+
+        // operator new can throw
+        data_ = new T[Height_ * Width_];
+        try {
+            // catch another exceptions
+            for (size_t i = 0; i < Height_; i++)
+                for (size_t j = 0; j < Width_; j++)
+                    data_[i * Width_ + j] = rhs[i][j];
+        } catch(...) {
+            // clean memory and rethrow
+            delete[] data_;
+            throw;
+        }
+
+        // safe allocate memory for row_permutation_ array
+        try {
+            row_perm_ = new size_t[Height_];
+            std::iota(row_perm_, row_perm_ + Height_, 0);
+        } catch (...) {
+            delete[] data_;
+            throw;
+        }
     }
 
-    Matrix(Mat_t<T> &&rhs) : Height_(rhs.get_heigth()), Width_(rhs.get_width()) {
-        data_ = rhs.data_;
-        rows_ = rhs.rows_;
-
+    Matrix(Mat_t<T> &&rhs) :
+        Height_(rhs.Height_), Width_(rhs.Width_), data_(rhs.data_)
+    {
         rhs.data_ = nullptr;
-        rhs.rows_ = nullptr;
     }
 
     Mat_t<T> &operator=(const Mat_t<T> &rhs) {
         if (this == &rhs)
             return *this;
-
-        delete[] data_;
-        delete[] rows_;
-
-        Height_ = rhs.get_height();
-        Width_ = rhs.get_width();
-
-        auto raw_copy = [&]() { std::copy(rhs.data_, rhs.data_ + Height_ * Width_, data_); };
-        memory_init(raw_copy);
-
+        Mat_t<T> tmp(rhs);
+        this->swap(tmp);
         return *this;
     }
 
     Mat_t<T> &operator=(Mat_t<T> &&rhs) {
         if (this == &rhs)
             return *this;
-
-        std::swap(Height_, rhs.Height_);
-        std::swap(Width_, rhs.Width_);
-        std::swap(data_, rhs.data_);
-        std::swap(rows_, rhs.rows_);
-
+        this->swap(rhs);
         return *this;
     }
 
     ~Matrix() {
-        delete[] rows_;
         delete[] data_;
-
-        rows_ = nullptr;
-        data_ = nullptr;
+        delete[] row_perm_;
     }
 
-    row_t &operator[](size_t idx) { return rows_[idx]; }
-    const row_t &operator[](size_t idx) const { return rows_[idx]; }
+    row_t operator[](size_t idx) {
+        return row_t{data_ + Width_ * row_perm_[idx]};
+    }
+    const row_t operator[](size_t idx) const {
+        return row_t{data_ + Width_ * row_perm_[idx]};
+    }
 
     Long_number det_integer() const {
         if (Width_ != Height_)
@@ -117,7 +163,7 @@ struct Matrix {
     void swap_row(size_t i, size_t j) {
         if (i == j)
             return;
-        std::swap(rows_[i], rows_[j]);
+        std::swap(row_perm_[i], row_perm_[j]);
     }
 
     size_t get_width() const { return Width_; }
@@ -127,26 +173,13 @@ struct Matrix {
     size_t Height_;
     size_t Width_;
     T *data_ = nullptr;
-    row_t *rows_ = nullptr;
+    size_t *row_perm_ = nullptr;
 
-    template <typename F>
-    void memory_init(F copy_stage) {
-        if (Height_ == 0 || Width_ == 0)
-            throw std::runtime_error("One or both matrix size are equal zero");
-
-        data_ = new T[Height_ * Width_];
-        rows_ = new T *[Height_];
-        if (rows_ == nullptr || data_ == nullptr)
-            throw std::runtime_error("operator new return nullptr");
-
-        try {
-            copy_stage();
-        } catch (std::exception &e) {
-            std::throw_with_nested(e);
-        }
-
-        for (size_t i = 0; i < Height_; i++)
-            rows_[i] = &data_[i * Width_];
+    void swap(Mat_t<T>& rhs) noexcept {
+        std::swap(rhs.Width_, Width_);
+        std::swap(rhs.Height_, Height_);
+        std::swap(rhs.data_, data_);
+        std::swap(rhs.row_perm_, row_perm_);
     }
 };
 
