@@ -153,7 +153,14 @@ void eval_det_real() {
 
     Linagl::Matrix<double> mat{matrix_size, matrix_size};
     std::cin >> mat;
-    std::cout << mat.det_real() << std::endl;
+
+    auto det = mat.det_real();
+    auto ten_pow = Linagl::Long_real(10);
+    for(int i = 0; i < 4; i++)
+        ten_pow *= ten_pow;
+
+    det = boost::multiprecision::round(det * ten_pow) / ten_pow;
+    std::cout << det.str() << std::endl;
 }
 
 int main() {
