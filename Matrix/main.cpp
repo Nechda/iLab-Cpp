@@ -1,6 +1,5 @@
 #include "Matrix.hpp"
 #include <cassert>
-#include <array>
 
 void t_matrix() {
     size_t n_tests = 0, matrix_size = 0;
@@ -156,7 +155,7 @@ void eval_det_real() {
 
     auto det = mat.det_real();
     auto ten_pow = Linagl::Long_real(10);
-    for(int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)
         ten_pow *= ten_pow;
 
     det = boost::multiprecision::round(det * ten_pow) / ten_pow;

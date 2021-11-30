@@ -5,9 +5,9 @@
 #include <cstddef>
 #include <exception>
 #include <iostream>
+#include <numeric>
 #include <stdexcept>
 #include <type_traits>
-#include <numeric>
 
 namespace Linagl {
 
@@ -17,7 +17,7 @@ using Number_ext = boost::rational<Long_number>;
 
 template <typename T>
 struct Matrix;
-template<typename Number_t>
+template <typename Number_t>
 Number_t det_LUP(Matrix<Number_t> mat);
 
 template <typename T>
@@ -25,11 +25,12 @@ struct Matrix {
   public:
     struct row_t {
       public:
-        row_t(T* ptr) : ptr_{ptr} {};
-        T& operator[](size_t idx) { return ptr_[idx]; }
-        const T& operator[](size_t idx) const { return ptr_[idx]; }
+        row_t(T *ptr) : ptr_{ptr} {};
+        T &operator[](size_t idx) { return ptr_[idx]; }
+        const T &operator[](size_t idx) const { return ptr_[idx]; }
+
       private:
-        T* ptr_;
+        T *ptr_;
     };
     template <typename U>
     using Mat_t = Matrix<U>;
@@ -63,7 +64,7 @@ struct Matrix {
             for (size_t i = 0; i < Height_; i++)
                 for (size_t j = 0; j < Width_; j++)
                     data_[i * Width_ + j] = static_cast<T>(rhs[i][j]);
-        } catch(...) {
+        } catch (...) {
             // clean memory and rethrow
             delete[] data_;
             throw;
@@ -78,7 +79,7 @@ struct Matrix {
             throw;
         }
     }
-    Matrix(const Mat_t<T> &rhs) : Height_(rhs.get_heigth()), Width_(rhs.get_width()) {
+    Matrix(const Mat_t<T> &rhs) : Height_(rhs.Height_), Width_(rhs.Width_) {
         if (Height_ == 0 || Width_ == 0)
             throw std::runtime_error("One or both matrix size are equal zero");
 
@@ -89,7 +90,7 @@ struct Matrix {
             for (size_t i = 0; i < Height_; i++)
                 for (size_t j = 0; j < Width_; j++)
                     data_[i * Width_ + j] = rhs[i][j];
-        } catch(...) {
+        } catch (...) {
             // clean memory and rethrow
             delete[] data_;
             throw;
@@ -105,10 +106,9 @@ struct Matrix {
         }
     }
 
-    Matrix(Mat_t<T> &&rhs) :
-        Height_(rhs.Height_), Width_(rhs.Width_), data_(rhs.data_)
-    {
+    Matrix(Mat_t<T> &&rhs) : Height_(rhs.Height_), Width_(rhs.Width_), data_(rhs.data_), row_perm_(rhs.row_perm_) {
         rhs.data_ = nullptr;
+        rhs.row_perm_ = nullptr;
     }
 
     Mat_t<T> &operator=(const Mat_t<T> &rhs) {
@@ -131,12 +131,8 @@ struct Matrix {
         delete[] row_perm_;
     }
 
-    row_t operator[](size_t idx) {
-        return row_t{data_ + Width_ * row_perm_[idx]};
-    }
-    const row_t operator[](size_t idx) const {
-        return row_t{data_ + Width_ * row_perm_[idx]};
-    }
+    row_t operator[](size_t idx) { return row_t{data_ + Width_ * row_perm_[idx]}; }
+    const row_t operator[](size_t idx) const { return row_t{data_ + Width_ * row_perm_[idx]}; }
 
     Long_number det_integer() const {
         if (Width_ != Height_)
@@ -175,7 +171,7 @@ struct Matrix {
     T *data_ = nullptr;
     size_t *row_perm_ = nullptr;
 
-    void swap(Mat_t<T>& rhs) noexcept {
+    void swap(Mat_t<T> &rhs) noexcept {
         std::swap(rhs.Width_, Width_);
         std::swap(rhs.Height_, Height_);
         std::swap(rhs.data_, data_);
@@ -183,7 +179,7 @@ struct Matrix {
     }
 };
 
-template<typename Number_t>
+template <typename Number_t>
 Number_t det_LUP(Matrix<Number_t> mat) {
     using boost::abs;
     using boost::multiprecision::abs;
