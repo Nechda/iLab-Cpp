@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/rational.hpp>
 #include <cstddef>
@@ -10,11 +11,13 @@
 namespace Linagl {
 
 using Long_number = boost::multiprecision::cpp_int;
+using Long_real = boost::multiprecision::cpp_dec_float_50;
 using Number_ext = boost::rational<Long_number>;
 
 template <typename T>
 struct Matrix;
-Number_ext det_LUP(Matrix<Number_ext> mat);
+template<typename Number_t>
+Number_t det_LUP(Matrix<Number_t> mat);
 
 template <typename T>
 struct Matrix {
@@ -89,11 +92,22 @@ struct Matrix {
     row_t &operator[](size_t idx) { return rows_[idx]; }
     const row_t &operator[](size_t idx) const { return rows_[idx]; }
 
-    Number_ext det() const {
+    Long_number det_integer() const {
         if (Width_ != Height_)
-            return Number_ext{};
+            return Long_number{};
         try {
             auto res = det_LUP(Mat_t<Number_ext>{*this});
+            return res.numerator();
+        } catch (std::exception &e) {
+            std::throw_with_nested(e);
+        }
+    }
+
+    Long_real det_real() const {
+        if (Width_ != Height_)
+            return Long_real{};
+        try {
+            auto res = det_LUP(Mat_t<Long_real>{*this});
             return res;
         } catch (std::exception &e) {
             std::throw_with_nested(e);
@@ -136,18 +150,21 @@ struct Matrix {
     }
 };
 
-Number_ext det_LUP(Matrix<Number_ext> mat) {
+template<typename Number_t>
+Number_t det_LUP(Matrix<Number_t> mat) {
+    using boost::abs;
+    using boost::multiprecision::abs;
     const size_t N = mat.get_heigth();
 
     auto &C = mat;
     size_t n_swaps = 0;
 
     for (size_t i = 0; i < N; i++) {
-        Number_ext pivot_val = -1;
+        Number_t pivot_val = -1;
         size_t pivot = -1;
         for (size_t row = i; row < N; row++) {
-            if (boost::abs(C[row][i]) > pivot_val) {
-                pivot_val = boost::abs(C[row][i]);
+            if (abs(C[row][i]) > pivot_val) {
+                pivot_val = abs(C[row][i]);
                 pivot = row;
             }
         }
@@ -164,7 +181,7 @@ Number_ext det_LUP(Matrix<Number_ext> mat) {
         }
     }
 
-    Number_ext res = n_swaps % 2 == 0 ? 1 : -1;
+    Number_t res = n_swaps % 2 == 0 ? 1 : -1;
     for (size_t i = 0; i < N; i++)
         res *= C[i][i];
     return res;

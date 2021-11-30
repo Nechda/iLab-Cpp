@@ -1,5 +1,6 @@
 #include "Matrix.hpp"
 #include <cassert>
+#include <array>
 
 void t_matrix() {
     size_t n_tests = 0, matrix_size = 0;
@@ -11,7 +12,7 @@ void t_matrix() {
         std::cin >> mat;
         std::cin >> det;
 
-        auto eval_det = mat.det();
+        auto eval_det = mat.det_integer();
         decltype(eval_det) correct_det{det};
         if (eval_det == correct_det) {
             std::cout << "Ok ";
@@ -19,8 +20,8 @@ void t_matrix() {
         }
 
         std::cout << "\n[Failed]\n" << mat;
-        std::cout << "Evaluated det = " << eval_det.numerator() << std::endl;
-        std::cout << "  Correct det = " << correct_det.numerator() << std::endl;
+        std::cout << "Evaluated det = " << eval_det << std::endl;
+        std::cout << "  Correct det = " << correct_det << std::endl;
         break;
     }
 }
@@ -137,19 +138,28 @@ void t_exceptions() {
     std::cout << "[ End exception testing ]" << std::endl;
 }
 
-void eval_det() {
+void eval_det_int() {
     size_t matrix_size;
     std::cin >> matrix_size;
 
     Linagl::Matrix<int> mat{matrix_size, matrix_size};
     std::cin >> mat;
-    std::cout << mat.det().numerator() << std::endl;
+    std::cout << mat.det_integer() << std::endl;
+}
+
+void eval_det_real() {
+    size_t matrix_size;
+    std::cin >> matrix_size;
+
+    Linagl::Matrix<double> mat{matrix_size, matrix_size};
+    std::cin >> mat;
+    std::cout << mat.det_real() << std::endl;
 }
 
 int main() {
     try {
 #ifndef TEST
-        eval_det();
+        eval_det_real();
 #else
         t_exceptions();
         t_matrix();
