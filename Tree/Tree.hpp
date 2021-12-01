@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <stack>
 #include <string>
 
 #define UNRECHEABLE assert(!"This line should be unrecheable")
@@ -9,15 +10,37 @@
 namespace Containers {
 class Tree {
   public:
-    Tree(){};
+    Tree() {}
+
+    Tree(const Tree &rhs) {
+        if (!rhs.root)
+            return;
+        root = Node::get_copy(rhs.root);
+        copy_tree_impl(rhs.root, root);
+    }
+
+    Tree &operator=(const Tree &rhs) {
+        if (this == &rhs)
+            return *this;
+        Tree tmp(rhs);
+        std::swap(tmp.root, root);
+    }
+
+    Tree(Tree&& rhs) {
+        std::swap(root, rhs.root);
+    }
+
+    Tree &operator=(Tree &&rhs) {
+        std::swap(root, rhs.root);
+    }
 
     void insert(int key) { root = insert_impl(root, key); }
 
-    void dump() { print_impl("", root, 0); }
+    void dump() const { print_impl("", root, 0); }
 
     void balance() { root = balance_impl(root); }
 
-    int upper_bound(int key) {
+    int upper_bound(int key) const {
         Node *node = root;
         Node *prev = nullptr;
         size_t cur_pos = Node::get_count(node->left) + 1;
@@ -40,13 +63,26 @@ class Tree {
             }
         } while (node ? node->key != key : 0);
 
-        if (!node) {
-            return prev_pos + (prev->key < key ? 0 : -1);
-        }
-        return cur_pos - 1;
+        int bound = prev_pos + (prev->key < key ? 0 : -1);
+        bound = !node ? bound : cur_pos - 1;
+        return bound;
     }
 
-    int nth(int k) {
+    ~Tree() {
+        std::stack<Node *> stack;
+        stack.push(root);
+        while (!stack.empty()) {
+            auto v = stack.top();
+            stack.pop();
+            if (v != nullptr) {
+                stack.push(v->left);
+                stack.push(v->right);
+            }
+            delete v;
+        }
+    }
+
+    int nth(int k) const {
         if (k > Node::get_count(root))
             return std::numeric_limits<int>::max();
 
@@ -73,12 +109,18 @@ class Tree {
   private:
     struct Node {
       public:
-        Node(int key_) : key(key_){};
+        Node(int key_) : key(key_) {}
         int key = 0;
 
         Node *left = nullptr;
         Node *right = nullptr;
 
+        static Node *get_copy(const Node *this_) {
+            if (!this_)
+                return nullptr;
+            Node *res = new Node(this_->key);
+            return res;
+        }
         static ssize_t get_height(const Node *this_) { return this_ ? this_->height : 0; }
         static ssize_t get_count(const Node *this_) { return this_ ? this_->count : 0; }
         static void fix(Node *this_) {
@@ -106,7 +148,31 @@ class Tree {
     };
     Node *root = nullptr;
 
-    void print_impl(const std::string &prefix, const Node *node, bool is_left) {
+    void copy_tree_impl(Node *original, Node *copied) {
+        if (!original)
+            return;
+
+        std::stack<Node *> stack_orig;
+        std::stack<Node *> stack_copy;
+        stack_orig.push(original);
+        stack_copy.push(copied);
+        while (!stack_orig.empty()) {
+            auto v_orig = stack_orig.top();
+            auto v_copy = stack_copy.top();
+            stack_orig.pop();
+            stack_copy.pop();
+            if (v_orig != nullptr) {
+                stack_orig.push(v_orig->left);
+                stack_orig.push(v_orig->right);
+                v_copy->left = Node::get_copy(v_orig->left);
+                v_copy->right = Node::get_copy(v_orig->right);
+                stack_copy.push(v_copy->left);
+                stack_copy.push(v_copy->right);
+            }
+        }
+    }
+
+    void print_impl(const std::string &prefix, const Node *node, bool is_left) const {
         if (!node)
             return;
 
@@ -167,130 +233,3 @@ class Tree {
     }
 };
 }; // namespace Containers
-
-/*
-            int nth(int k) {
-                if(k > root->n_nodes)
-                    return std::numeric_limits<int>::max();
-
-                static auto safe_get_count = [](const Node* node) -> ssize_t {
-                    return node ? node->n_nodes : 0;
-                };
-
-                Node* node = root;
-                size_t cur_pos = safe_get_count(node->left) + 1;
-                do{
-                    if(cur_pos > k) {
-                        node = node->left;
-                        cur_pos -= safe_get_count(node->right) + 1;
-                        // now it root of left subtree
-                        continue;
-                    }
-                    if(cur_pos < k) {
-                        node = node->right;
-                        cur_pos += safe_get_count(node->left) + 1;
-                        // now it root of right subtree
-                        continue;
-                    }
-                }while(cur_pos != k);
-
-                return node->key;
-            }
-            */
-
-/*
-            std::pair<Node*, Node*> get_left_side(Node* node) {
-                Node* prev = nullptr;
-                while(node && node->left) {
-                    prev = node;
-                    node = node->left;
-                }
-                return {prev, node};
-            }
-
-            std::pair<Node*, Node*> get_right_side(Node* node) {
-                Node* prev = nullptr;
-                while(node && node->right) {
-                    prev = node;
-                    node = node->right;
-                }
-                return {prev, node};
-            }
-
-            void increase_count(Node* node, int key) {
-                do{
-                    node->n_nodes++;
-                    if(node->key == key)
-                        return;
-                    node = key < node->key ? node->left : node->right;
-                }while(node);
-            }
-
-            void decreace_count(Node* node, int key) {
-                do{
-                    node->n_nodes--;
-                    if(node->key == key)
-                        return;
-                    node = key < node->key ? node->left : node->right;
-                }while(node);
-            }
-
-            void balance_impl(Node* node) {
-                if(!node) return;
-                static auto safe_get_count = [](const Node* node) -> ssize_t {
-                    return node ? node->n_nodes + 1 : 0;
-                };
-
-                auto left_side_count = safe_get_count(node->left);
-                auto right_side_count = safe_get_count(node->right);
-                if(left_side_count + 2 <= right_side_count) {
-                    // pop median from right side
-                    auto pnn = get_left_side(node->right);
-                    pnn.first = !pnn.first ? node : pnn.first;
-                    // update counts
-                    decreace_count(node->right, pnn.second->key);
-
-                    auto root_key = node->key;
-                    node->key = pnn.second->key; // median at the root
-                    helper_remove(pnn); // remove median from subtree
-
-                    // insert old root into right-subtree
-                    pnn = get_right_side(node->left);
-                    pnn.first = !pnn.first ? node : pnn.first;
-                    if(!pnn.second) {
-                        pnn.first->left = new Node{root_key};
-                    } else {
-                        pnn.second->right = new Node{root_key};
-                    }
-                    // update counts
-                    increase_count(node->left, root_key);
-                }
-                if(left_side_count >= right_side_count + 2) {
-                    // pop median from left side
-                    auto pnn = get_right_side(node->left);
-                    pnn.first = !pnn.first ? node : pnn.first;
-                    // update counts
-                    decreace_count(node->left, pnn.second->key);
-
-                    auto root_key = node->key;
-                    node->key = pnn.second->key; // median at the root
-                    helper_remove(pnn); // remove median from subtree
-
-                    // insert old root into left-subtree
-                    pnn = get_left_side(node->right);
-                    pnn.first = !pnn.first ? node : pnn.first;
-                    if(!pnn.second) {
-                        pnn.first->right = new Node{root_key};
-                    } else {
-                        pnn.second->left = new Node{root_key};
-                    }
-                    // update counts
-                    increase_count(node->right, root_key);
-                }
-
-                balance_impl(node->left);
-                balance_impl(node->right);
-
-                return;
-            }
-            */
