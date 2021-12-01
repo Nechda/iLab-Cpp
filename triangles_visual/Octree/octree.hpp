@@ -38,6 +38,7 @@ struct AABB {
     Geomentry::Vec3 max_;
 
     AABB(const Geomentry::Triangle &t) {
+        // TODO: create box, based on cylinder, not triangle
         for (auto i : {0, 1, 2}) {
             min_[i] = +std::numeric_limits<double>::infinity();
             max_[i] = -std::numeric_limits<double>::infinity();

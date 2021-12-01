@@ -19,6 +19,20 @@
 
 Camera scene_camera;
 
+// TODO: NEAREST TASK --- create ssbo array of colours and change it for each 100 frames
+//       in main loop of programm
+// TODO: AFTER TASK --- create ssbo array for matrices that rotate ONE triangle arount
+//       one of it edge
+
+/*
+    Let triangle{A,B,C} then for rotate matrix around AB segment need matrix M:
+    r' = T(OA) R(AB, phi) T(-OA) r 
+    where:
+        T(p) --- translation matrix to verctor p
+        R(v, phi) --- rotation matrix around v axis on phi angle
+        OA --- vector from coordinate system to first point of triangle
+*/
+
 struct SceneInfo {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
@@ -55,6 +69,9 @@ std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
     }
 #endif
 
+    // TODO: after reading trinagles reindex it vertices in such way
+    //       when v[0]---v[1] -- is a segment of rotation
+
     // find an area where located all triangles
     Geomentry::Vec3 min = trs[0][0];
     Geomentry::Vec3 max = trs[0][0];
@@ -70,8 +87,12 @@ std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
     for (size_t i = 0; i < N; i++)
         tree.insert(trs[i], i);
 
+    // TODO: dfs should generate an array of pairs, that represend
+    //       indices of triangles, that we will check for intersection
+    //       each frame. So load this pairs into memory in GPU
     // dfs
     tree.DFS();
+
 
     std::vector<Vulkan::Mesh::Vertex> result(3 * N);
     size_t current_tr = 0;
