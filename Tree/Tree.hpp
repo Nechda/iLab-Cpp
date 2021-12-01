@@ -26,12 +26,13 @@ class Tree {
         std::swap(tmp.root, root);
     }
 
-    Tree(Tree&& rhs) {
-        std::swap(root, rhs.root);
-    }
+    Tree(Tree &&rhs) { std::swap(root, rhs.root); }
 
     Tree &operator=(Tree &&rhs) {
+        if (this == &rhs)
+            return *this;
         std::swap(root, rhs.root);
+        return *this;
     }
 
     void insert(int key) { root = insert_impl(root, key); }
@@ -190,10 +191,29 @@ class Tree {
         if (!root)
             return new Node{k};
 
-        if (k < root->key)
-            root->left = insert_impl(root->left, k);
-        else
-            root->right = insert_impl(root->right, k);
+        std::stack<Node *> path;
+
+        Node *cur = root;
+        while (k != cur->key) {
+            path.push(cur);
+            auto &child = k < cur->key ? cur->left : cur->right;
+            if (!child) {
+                child = new Node{k};
+                break;
+            }
+            cur = child;
+        }
+
+        Node *parent = nullptr;
+        cur = path.top();
+        path.pop();
+        while (!path.empty()) {
+            parent = path.top();
+            path.pop();
+            auto &cur_ref = parent->left == cur ? parent->left : parent->right;
+            cur_ref = balance_impl(cur_ref);
+            cur = parent;
+        }
 
         return balance_impl(root);
     }
