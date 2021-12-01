@@ -83,12 +83,12 @@ class Tree {
         }
     }
 
-    int nth(int k) const {
+    int nth(ssize_t k) const {
         if (k > Node::get_count(root))
             return std::numeric_limits<int>::max();
 
         Node *node = root;
-        size_t cur_pos = Node::get_count(node->left) + 1;
+        ssize_t cur_pos = Node::get_count(node->left) + 1;
         do {
             if (cur_pos > k) {
                 node = node->left;

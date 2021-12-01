@@ -13,7 +13,7 @@ std::vector<int> get_random_array(size_t N, int range_radius) {
     std::uniform_int_distribution<int> uniform_dist(-range_radius, range_radius);
 
     std::vector<int> arr(N);
-    for (int i = 0; i < arr.size(); i++)
+    for (size_t i = 0; i < arr.size(); i++)
         arr[i] = uniform_dist(el);
 
     return arr;
@@ -24,7 +24,7 @@ bool comare_vectors(std::vector<int> &a, std::vector<int> &b) {
     if (size != b.size())
         std::cout << "\n[Fail] Different sizes" << std::endl;
 
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         if (a[i] != b[i]) {
             std::cout << "\nIndex = " << i << std::endl;
             std::cout << "a[i] = " << a[i] << std::endl;
@@ -68,7 +68,7 @@ void t_tree() {
             }
             std::vector<int> from_tree(s.size());
 
-            for (int i = 1; i <= s.size(); i++) {
+            for (size_t i = 1; i <= s.size(); i++) {
                 auto it = t.nth(i);
                 from_tree[i - 1] = it;
             }
