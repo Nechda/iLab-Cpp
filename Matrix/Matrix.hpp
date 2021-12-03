@@ -1,4 +1,5 @@
 #pragma once
+#include "mm.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/rational.hpp>
@@ -8,22 +9,6 @@
 #include <numeric>
 #include <stdexcept>
 #include <type_traits>
-
-template <typename T>
-void construct(T *p, const T &rhs) {
-    new (p) T(rhs);
-}
-template <typename T>
-void destroy(T *p) {
-    p->~T();
-}
-template <typename It_t>
-void destroy(It_t first, It_t last) noexcept {
-    while (first != last) {
-        destroy(&*first);
-        first++;
-    }
-}
 
 namespace Linagl {
 
@@ -55,7 +40,7 @@ struct array_container {
         : data_(size == 0 ? nullptr : static_cast<T *>(::operator new(sizeof(T) * size))), size_(size) {}
 
     ~array_container() {
-        destroy(data_, data_ + used_);
+        mm::destroy(data_, data_ + used_);
         ::operator delete(data_);
     }
 
@@ -92,7 +77,7 @@ struct Matrix : private array_container<T> {
         for (size_t i = 0; i < Height_; i++)
             for (size_t j = 0; j < Width_; j++) {
                 auto place = data_ + Width_ * i + j;
-                construct(place, T{});
+                mm::construct(place, T{});
                 used_++;
             }
         std::iota(row_perm_.begin(), row_perm_.end(), 0);
@@ -106,7 +91,7 @@ struct Matrix : private array_container<T> {
             for (size_t j = 0; j < Width_; j++) {
                 auto place = data_ + Width_ * i + j;
                 auto tmp = static_cast<T>(rhs[i][j]);
-                construct(place, tmp);
+                mm::construct(place, tmp);
                 used_++;
             }
         std::iota(row_perm_.begin(), row_perm_.end(), 0);
@@ -117,7 +102,7 @@ struct Matrix : private array_container<T> {
         for (size_t i = 0; i < Height_; i++)
             for (size_t j = 0; j < Width_; j++) {
                 auto place = data_ + Width_ * i + j;
-                construct(place, rhs[i][j]);
+                mm::construct(place, rhs[i][j]);
                 used_++;
             }
         std::iota(row_perm_.begin(), row_perm_.end(), 0);
