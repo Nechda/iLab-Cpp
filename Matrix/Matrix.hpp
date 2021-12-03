@@ -9,6 +9,22 @@
 #include <stdexcept>
 #include <type_traits>
 
+template <typename T>
+void construct(T *p, const T &rhs) {
+    new (p) T(rhs);
+}
+template <typename T>
+void destroy(T *p) {
+    p->~T();
+}
+template <typename It_t>
+void destroy(It_t first, It_t last) noexcept {
+    while (first != last) {
+        destroy(&*first);
+        first++;
+    }
+}
+
 namespace Linagl {
 
 using Long_number = boost::multiprecision::cpp_int;
@@ -16,12 +32,49 @@ using Long_real = boost::multiprecision::cpp_dec_float_50;
 using Number_ext = boost::rational<Long_number>;
 
 template <typename T>
+struct array_container {
+    typedef array_container<T> self_type;
+
+  protected:
+    array_container(const self_type &) = delete;
+    array_container &operator=(const self_type &) = delete;
+
+    array_container(self_type &&rhs) noexcept : data_(rhs.data_), size_(rhs.size_), used_(rhs.used_) {
+        rhs.data_ = nullptr;
+        rhs.size_ = 0;
+        rhs.used_ = 0;
+    }
+    array_container &operator=(self_type &&rhs) noexcept {
+        std::swap(data_, rhs.data_);
+        std::swap(size_, rhs.size_);
+        std::swap(used_, rhs.used_);
+        return *this;
+    }
+
+    array_container(size_t size = 0)
+        : data_(size == 0 ? nullptr : static_cast<T *>(::operator new(sizeof(T) * size))), size_(size) {}
+
+    ~array_container() {
+        destroy(data_, data_ + used_);
+        ::operator delete(data_);
+    }
+
+    T *data_ = nullptr;
+    size_t size_ = 0;
+    size_t used_ = 0;
+};
+
+template <typename T>
 struct Matrix;
 template <typename Number_t>
 Number_t det_LUP(Matrix<Number_t> mat);
 
 template <typename T>
-struct Matrix {
+struct Matrix : private array_container<T> {
+    using array_container<T>::data_;
+    using array_container<T>::size_;
+    using array_container<T>::used_;
+
   public:
     struct row_t {
       public:
@@ -35,101 +88,48 @@ struct Matrix {
     template <typename U>
     using Mat_t = Matrix<U>;
 
-    Matrix(size_t N, size_t M) : Height_(N), Width_(M) {
-        if (Height_ == 0 || Width_ == 0)
-            throw std::runtime_error("One or both matrix size are equal zero");
-
-        // operator new cat throw
-        data_ = new T[Height_ * Width_];
-
-        // safe allocate memory for row_permutation_ array
-        try {
-            row_perm_ = new size_t[Height_];
-            std::iota(row_perm_, row_perm_ + Height_, 0);
-        } catch (...) {
-            delete[] data_;
-            throw;
-        }
+    Matrix(size_t N, size_t M) : array_container<T>(N * M), Height_(N), Width_(M), row_perm_(N) {
+        for (size_t i = 0; i < Height_; i++)
+            for (size_t j = 0; j < Width_; j++) {
+                auto place = data_ + Width_ * i + j;
+                construct(place, T{});
+                used_++;
+            }
+        std::iota(row_perm_.begin(), row_perm_.end(), 0);
     }
 
     template <typename U>
-    Matrix(const Mat_t<U> &rhs) : Height_(rhs.get_heigth()), Width_(rhs.get_width()) {
-        if (Height_ == 0 || Width_ == 0)
-            throw std::runtime_error("One or both matrix size are equal zero");
-
-        // operator new can throw
-        data_ = new T[Height_ * Width_];
-        try {
-            // catch another exceptions
-            for (size_t i = 0; i < Height_; i++)
-                for (size_t j = 0; j < Width_; j++)
-                    data_[i * Width_ + j] = static_cast<T>(rhs[i][j]);
-        } catch (...) {
-            // clean memory and rethrow
-            delete[] data_;
-            throw;
-        }
-
-        // safe allocate memory for row_permutation_ array
-        try {
-            row_perm_ = new size_t[Height_];
-            std::iota(row_perm_, row_perm_ + Height_, 0);
-        } catch (...) {
-            delete[] data_;
-            throw;
-        }
+    Matrix(const Mat_t<U> &rhs)
+        : array_container<T>(rhs.get_heigth() * rhs.get_width()), Height_(rhs.get_heigth()), Width_(rhs.get_width()),
+          row_perm_(rhs.get_heigth()) {
+        for (size_t i = 0; i < Height_; i++)
+            for (size_t j = 0; j < Width_; j++) {
+                auto place = data_ + Width_ * i + j;
+                auto tmp = static_cast<T>(rhs[i][j]);
+                construct(place, tmp);
+                used_++;
+            }
+        std::iota(row_perm_.begin(), row_perm_.end(), 0);
     }
-    Matrix(const Mat_t<T> &rhs) : Height_(rhs.Height_), Width_(rhs.Width_) {
-        if (Height_ == 0 || Width_ == 0)
-            throw std::runtime_error("One or both matrix size are equal zero");
-
-        // operator new can throw
-        data_ = new T[Height_ * Width_];
-        try {
-            // catch another exceptions
-            for (size_t i = 0; i < Height_; i++)
-                for (size_t j = 0; j < Width_; j++)
-                    data_[i * Width_ + j] = rhs[i][j];
-        } catch (...) {
-            // clean memory and rethrow
-            delete[] data_;
-            throw;
-        }
-
-        // safe allocate memory for row_permutation_ array
-        try {
-            row_perm_ = new size_t[Height_];
-            std::iota(row_perm_, row_perm_ + Height_, 0);
-        } catch (...) {
-            delete[] data_;
-            throw;
-        }
+    Matrix(const Mat_t<T> &rhs)
+        : array_container<T>(rhs.get_heigth() * rhs.get_width()), Height_(rhs.Height_), Width_(rhs.Width_),
+          row_perm_(rhs.Height_) {
+        for (size_t i = 0; i < Height_; i++)
+            for (size_t j = 0; j < Width_; j++) {
+                auto place = data_ + Width_ * i + j;
+                construct(place, rhs[i][j]);
+                used_++;
+            }
+        std::iota(row_perm_.begin(), row_perm_.end(), 0);
     }
-
-    Matrix(Mat_t<T> &&rhs) : Height_(rhs.Height_), Width_(rhs.Width_), data_(rhs.data_), row_perm_(rhs.row_perm_) {
-        rhs.data_ = nullptr;
-        rhs.row_perm_ = nullptr;
-    }
-
     Mat_t<T> &operator=(const Mat_t<T> &rhs) {
-        if (this == &rhs)
-            return *this;
         Mat_t<T> tmp(rhs);
-        this->swap(tmp);
+        std::swap(*this, tmp);
         return *this;
     }
 
-    Mat_t<T> &operator=(Mat_t<T> &&rhs) {
-        if (this == &rhs)
-            return *this;
-        this->swap(rhs);
-        return *this;
-    }
-
-    ~Matrix() {
-        delete[] data_;
-        delete[] row_perm_;
-    }
+    Matrix(Mat_t<T> &&rhs) = default;
+    Mat_t<T> &operator=(Mat_t<T> &&rhs) = default;
 
     row_t operator[](size_t idx) { return row_t{data_ + Width_ * row_perm_[idx]}; }
     const row_t operator[](size_t idx) const { return row_t{data_ + Width_ * row_perm_[idx]}; }
@@ -156,7 +156,7 @@ struct Matrix {
         }
     }
 
-    void swap_row(size_t i, size_t j) {
+    void swap_row(size_t i, size_t j) noexcept {
         if (i == j)
             return;
         std::swap(row_perm_[i], row_perm_[j]);
@@ -168,15 +168,7 @@ struct Matrix {
   private:
     size_t Height_;
     size_t Width_;
-    T *data_ = nullptr;
-    size_t *row_perm_ = nullptr;
-
-    void swap(Mat_t<T> &rhs) noexcept {
-        std::swap(rhs.Width_, Width_);
-        std::swap(rhs.Height_, Height_);
-        std::swap(rhs.data_, data_);
-        std::swap(rhs.row_perm_, row_perm_);
-    }
+    std::vector<size_t> row_perm_;
 };
 
 template <typename Number_t>

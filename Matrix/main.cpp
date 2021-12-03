@@ -44,6 +44,7 @@ void t_exceptions() {
     /*
         1. Invalid matrix size-tests
     */
+    std::cout << "1. Invalid matrix size-tests" << std::endl;
     n_tests_with_ex += try_wrapper([]() { Linagl::Matrix<int> mat(0, 0); });
     n_tests_with_ex += try_wrapper([]() { Linagl::Matrix<int> mat(0, 1); });
     n_tests_with_ex += try_wrapper([]() { Linagl::Matrix<int> mat(1, 0); });
@@ -51,6 +52,7 @@ void t_exceptions() {
     /*
         2. Triggering all types of ctors
     */
+    std::cout << "2. Triggering all types of ctors" << std::endl;
     n_tests_with_ex += try_wrapper([]() {
         Linagl::Matrix<int> mat(2, 2);
 
@@ -114,6 +116,7 @@ void t_exceptions() {
     /*
         3. Trigger assign operators
     */
+    std::cout << "3. Trigger assign operators" << std::endl;
     n_tests_with_ex += try_wrapper([]() {
         Linagl::Matrix<int> long_lived(2, 2);
         Linagl::Matrix<float> mat(2, 2);
@@ -132,7 +135,6 @@ void t_exceptions() {
         mat[1][1] = 3;
         long_lived = std::move(mat);
         assert(long_lived[0][0] == 3 && long_lived[1][1] == 3);
-        assert(mat[0][0] == 1 && mat[1][1] == 1);
     });
     std::cout << "[ End exception testing ]" << std::endl;
 }
