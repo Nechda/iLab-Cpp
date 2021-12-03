@@ -7,6 +7,9 @@
 
 using namespace Containers;
 
+Containers::tree_container::FlatStack Containers::tree_container::stack_s0_;
+Containers::tree_container::FlatStack Containers::tree_container::stack_s1_;
+
 std::vector<int> get_random_array(size_t N, int range_radius) {
     std::random_device rd;
     std::default_random_engine el(rd());
@@ -78,6 +81,14 @@ void t_tree() {
                 return;
         }
     }
+}
+
+void simple() {
+    Tree tree;
+    tree.insert(0);
+    tree.insert(1);
+    tree.insert(2);
+    tree.insert(3);
 }
 
 void tree_eval() {

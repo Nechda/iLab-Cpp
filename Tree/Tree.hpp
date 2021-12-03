@@ -8,32 +8,110 @@
 #define UNRECHEABLE assert(!"This line should be unrecheable")
 
 namespace Containers {
-class Tree {
+
+struct Node {
+  public:
+    int key = 0;
+    Node *left = nullptr;
+    Node *right = nullptr;
+
+  public:
+    Node(int key_) : key(key_) {}
+
+    static ssize_t height_diff(Node *this_) { return this_ ? get_height(this_->right) - get_height(this_->left) : 0; }
+    static Node *get_copy(const Node *this_) {
+        if (!this_)
+            return nullptr;
+        Node *res = new Node(this_->key);
+        return res;
+    }
+    static void fix(Node *this_) {
+        if (!this_)
+            return;
+
+        auto &left = this_->left;
+        auto &right = this_->right;
+
+        auto left_hegiht = get_height(left);
+        auto right_height = get_height(right);
+        auto left_count = get_count(left);
+        auto right_count = get_count(right);
+
+        this_->height = std::max(left_hegiht, right_height) + 1;
+        this_->count = left_count + right_count + 1;
+    }
+    static size_t get_height(const Node *this_) { return this_ ? this_->height : 0; }
+    static size_t get_count(const Node *this_) { return this_ ? this_->count : 0; }
+
+  private:
+    ssize_t height = 1;
+    size_t count = 1;
+};
+
+struct tree_container {
+  protected:
+    tree_container() {}
+
+    tree_container &operator=(const tree_container &) = delete;
+    tree_container(const tree_container &) = delete;
+
+    tree_container &operator=(tree_container &&rhs) noexcept {
+        std::swap(root, rhs.root);
+        return *this;
+    }
+    tree_container(tree_container &&rhs) noexcept : root(rhs.root) { rhs.root = nullptr; }
+
+    ~tree_container() {
+        auto &stack = stack_s0_;
+        stack.clear();
+        stack.push(root);
+        while (!stack.empty()) {
+            auto v = stack.top();
+            stack.pop();
+            if (v != nullptr) {
+                stack.push(v->left);
+                stack.push(v->right);
+            }
+            delete v;
+        }
+    }
+
+    Node *root = nullptr;
+
+    struct FlatStack {
+        Node *&top() { return data_[idx_ - 1]; }
+        void push(Node *item) {
+            data_[idx_] = item;
+            idx_++;
+        }
+        void pop() { idx_--; }
+        bool empty() { return idx_ == 0; }
+        void clear() { idx_ = 0; }
+
+      private:
+        Node *data_[sizeof(size_t) << 3U] = {};
+        size_t idx_ = 0;
+    };
+    static FlatStack stack_s0_;
+    static FlatStack stack_s1_;
+};
+
+class Tree : public tree_container {
   public:
     Tree() {}
 
     Tree(const Tree &rhs) {
-        if (!rhs.root)
-            return;
         root = Node::get_copy(rhs.root);
         copy_tree_impl(rhs.root, root);
     }
-
     Tree &operator=(const Tree &rhs) {
-        if (this == &rhs)
-            return *this;
         Tree tmp(rhs);
-        std::swap(tmp.root, root);
-    }
-
-    Tree(Tree &&rhs) { std::swap(root, rhs.root); }
-
-    Tree &operator=(Tree &&rhs) {
-        if (this == &rhs)
-            return *this;
-        std::swap(root, rhs.root);
+        std::swap(*this, tmp);
         return *this;
     }
+
+    Tree(Tree &&rhs) = default;
+    Tree &operator=(Tree &&rhs) = default;
 
     void insert(int key) { root = insert_impl(root, key); }
 
@@ -69,26 +147,12 @@ class Tree {
         return bound;
     }
 
-    ~Tree() {
-        std::stack<Node *> stack;
-        stack.push(root);
-        while (!stack.empty()) {
-            auto v = stack.top();
-            stack.pop();
-            if (v != nullptr) {
-                stack.push(v->left);
-                stack.push(v->right);
-            }
-            delete v;
-        }
-    }
-
-    int nth(ssize_t k) const {
+    int nth(size_t k) const {
         if (k > Node::get_count(root))
             return std::numeric_limits<int>::max();
 
         Node *node = root;
-        ssize_t cur_pos = Node::get_count(node->left) + 1;
+        size_t cur_pos = Node::get_count(node->left) + 1;
         do {
             if (cur_pos > k) {
                 node = node->left;
@@ -108,53 +172,15 @@ class Tree {
     }
 
   private:
-    struct Node {
-      public:
-        Node(int key_) : key(key_) {}
-        int key = 0;
-
-        Node *left = nullptr;
-        Node *right = nullptr;
-
-        static Node *get_copy(const Node *this_) {
-            if (!this_)
-                return nullptr;
-            Node *res = new Node(this_->key);
-            return res;
-        }
-        static ssize_t get_height(const Node *this_) { return this_ ? this_->height : 0; }
-        static ssize_t get_count(const Node *this_) { return this_ ? this_->count : 0; }
-        static void fix(Node *this_) {
-            if (!this_)
-                return;
-
-            auto &left = this_->left;
-            auto &right = this_->right;
-
-            auto left_hegiht = get_height(left);
-            auto right_height = get_height(right);
-            auto left_count = get_count(left);
-            auto right_count = get_count(right);
-
-            this_->height = std::max(left_hegiht, right_height) + 1;
-            this_->count = left_count + right_count + 1;
-        }
-        static ssize_t height_diff(Node *this_) {
-            return this_ ? get_height(this_->right) - get_height(this_->left) : 0;
-        }
-
-      private:
-        ssize_t height = 1;
-        ssize_t count = 1;
-    };
-    Node *root = nullptr;
-
     void copy_tree_impl(Node *original, Node *copied) {
         if (!original)
             return;
 
-        std::stack<Node *> stack_orig;
-        std::stack<Node *> stack_copy;
+        auto &stack_orig = tree_container::stack_s0_;
+        auto &stack_copy = tree_container::stack_s1_;
+        stack_orig.clear();
+        stack_copy.clear();
+
         stack_orig.push(original);
         stack_copy.push(copied);
         while (!stack_orig.empty()) {
@@ -191,7 +217,8 @@ class Tree {
         if (!root)
             return new Node{k};
 
-        std::stack<Node *> path;
+        auto &path = tree_container::stack_s0_;
+        path.clear();
 
         Node *cur = root;
         while (k != cur->key) {
