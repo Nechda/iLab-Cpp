@@ -1,8 +1,10 @@
 #include "Tree.hpp"
 #include <chrono>
+#include <cstring>
 #include <iomanip>
 #include <random>
 #include <set>
+#include <sstream>
 #include <vector>
 
 using namespace Containers;
@@ -83,12 +85,60 @@ void t_tree() {
     }
 }
 
-void simple() {
+int t_tree_e2e(int argc, char **argv) {
+    bool quiet = 0;
+    for (int i = 0; i < argc && !quiet; i++)
+        quiet |= !std::strcmp("--quiet", argv[i]);
+
+    std::string in, out;
+    std::getline(std::cin, in);
+    std::getline(std::cin, out);
+    std::stringstream ss_in(in);
+    std::stringstream ss_out(out);
+    std::stringstream ss_answ;
     Tree tree;
-    tree.insert(0);
-    tree.insert(1);
-    tree.insert(2);
-    tree.insert(3);
+    do {
+        char req = 0;
+        int arg = 0;
+        ss_in >> req >> arg;
+        switch (req) {
+        case 'k':
+            tree.insert(arg);
+            break;
+        case 'm':
+            ss_answ << tree.nth(arg) << " ";
+            break;
+        case 'n':
+            ss_answ << tree.upper_bound(arg) << " ";
+            break;
+        }
+    } while (ss_in);
+
+    if (!quiet) {
+        std::cout << "My answer : " << std::endl;
+        std::cout << ss_answ.str() << std::endl;
+        std::cout << "Correct answer: " << std::endl;
+        std::cout << ss_out.str() << std::endl;
+        tree.dump();
+    }
+
+    bool pass = 1;
+    int idx = 1;
+    while (ss_out && pass) {
+        int correct = 0;
+        int answ = 0;
+        ss_out >> correct;
+        ss_answ >> answ;
+        pass &= correct == answ;
+        if (!quiet) {
+            std::cout << "[" << idx << "]: " << correct << " vs " << answ << std::endl;
+            idx++;
+        }
+    }
+
+    std::cout << (pass ? "Ok" : "Failed") << std::endl;
+
+    return !pass;
 }
 
 void tree_eval() {
@@ -111,11 +161,18 @@ void tree_eval() {
     } while (std::cin);
 }
 
-int main() {
-#ifndef TEST
-    tree_eval();
-#else
+int main(int argc, char **argv) {
+
+#ifdef E2ETESTER
+    return t_tree_e2e(argc, argv);
+#endif
+
+#ifdef STRESS
     t_tree();
+#endif
+
+#ifdef UI
+    tree_eval();
 #endif
     return 0;
 }

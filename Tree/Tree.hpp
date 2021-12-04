@@ -142,6 +142,9 @@ class Tree : public tree_container {
             }
         } while (node ? node->key != key : 0);
 
+        if (node == root)
+            return cur_pos - 1;
+
         int bound = prev_pos + (prev->key < key ? 0 : -1);
         bound = !node ? bound : cur_pos - 1;
         return bound;
@@ -207,7 +210,8 @@ class Tree : public tree_container {
         std::cout << (is_left ? "├──(L)" : "└──(R)");
 
         std::cout << "{ key = " << node->key << " | "
-                  << " count = " << Node::get_count(node) << " }" << std::endl;
+                  << " count = " << Node::get_count(node) << " | "
+                  << " height = " << Node::get_height(node) << " }" << std::endl;
 
         print_impl(prefix + (is_left ? "│   " : "    "), node->left, 1);
         print_impl(prefix + (is_left ? "│   " : "    "), node->right, 0);
@@ -221,15 +225,20 @@ class Tree : public tree_container {
         path.clear();
 
         Node *cur = root;
+        bool was_allocation = 0;
         while (k != cur->key) {
             path.push(cur);
             auto &child = k < cur->key ? cur->left : cur->right;
             if (!child) {
                 child = new Node{k};
+                was_allocation = 1;
                 break;
             }
             cur = child;
         }
+
+        if (!was_allocation)
+            return root;
 
         Node *parent = nullptr;
         cur = path.top();
@@ -267,14 +276,22 @@ class Tree : public tree_container {
         Node::fix(root);
         auto height_diff = Node::height_diff(root);
         if (height_diff == 2) {
-            if (Node::height_diff(root->right) < 0)
+            if (Node::height_diff(root->right) < 0) {
                 root->right = rotate_right(root->right);
-            return rotate_left(root);
+                Node::fix(root->right);
+            }
+            auto ret = rotate_left(root);
+            Node::fix(ret);
+            return ret;
         }
         if (height_diff == -2) {
-            if (Node::height_diff(root->left) > 0)
+            if (Node::height_diff(root->left) > 0) {
                 root->left = rotate_left(root->left);
-            return rotate_right(root);
+                Node::fix(root->left);
+            }
+            auto ret = rotate_right(root);
+            Node::fix(ret);
+            return ret;
         }
         return root;
     }
