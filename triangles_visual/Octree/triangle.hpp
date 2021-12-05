@@ -20,6 +20,11 @@ struct Vec3 {
         z /= length;
     }
 
+    double length() const {
+        double res = x * x + y * y + z * z;
+        return std::sqrt(res);
+    }
+
     Vec3 operator*(double k) const {
         Vec3 result(*this);
         for (auto d : {0, 1, 2})
@@ -175,5 +180,55 @@ struct Triangle {
 };
 
 bool is_intersected_impl(const Triangle &a, const Triangle &b);
+
+struct Cylinder {
+    Vec3 c;
+    Vec3 w;
+    double r;
+    double h;
+};
+
+bool is_intersected_impl(const Cylinder &a, const Cylinder &b) {
+    // here is approximation cylinders by boxes
+
+    auto delta = a.c - b.c;
+    if(delta.length() < 1e-5)
+        return true;
+
+    auto k = a.w ^ b.w;
+    if(k.length() < 1e-5) {
+        auto dot_ = delta * a.w;
+        auto paral = a.w * dot_;
+        auto perp = delta - a.w * dot_;
+        perp.normalize();
+        k = perp;
+    }
+
+    auto third_1 = k ^ a.w;
+    third_1.normalize();
+    auto omega_1 = (third_1 * a.r + k * a.r) * 2.0 + a.w * a.h;
+
+    auto third_2 = k ^ b.w;
+    third_2.normalize();
+    auto omega_2 = (third_2 * b.r + k * b.r) * 2.0 + b.w * b.h;
+
+    // true if there is NO intersection
+    auto f = [&](Vec3 D) {
+        return 0.5 * std::abs(D * delta) > std::abs(D * omega_1) + std::abs(D * omega_2);
+    };
+
+    // if we found direction, where boxes are not intersection
+    // so there is a plane, that divide space into two
+    // non intersection part where located our boxes
+    bool has_intersection = 1;
+
+    has_intersection &= !f(a.w);
+    has_intersection &= !f(b.w);
+    has_intersection &= !f(k);
+    has_intersection &= !f(third_1);
+    has_intersection &= !f(third_2);
+
+    return has_intersection;
+}
 
 } // namespace Geomentry
