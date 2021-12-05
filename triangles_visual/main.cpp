@@ -42,57 +42,46 @@ struct SceneInfo {
     alignas(16) glm::vec3 light_color;
 } global_scene_info;
 
-std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
-#ifndef __NO_FILE__
-    size_t N = 0;
-    std::cin >> N;
-    std::vector<Geomentry::Triangle> trs(N);
-    for (auto &tr : trs) {
-        for (auto v : {0, 1, 2})
-            for (auto d : {0, 1, 2})
-                std::cin >> tr[v][d];
-    }
-#else
-    size_t N = 1000;
-    auto random = []() { return ((rand() % 1000 / 1000.0f) - 0.5)*2; };
-    auto rand_vec = [&](const float R) {return R * glm::vec3(random(), random(), random()); };
 
-    std::vector<Geomentry::Triangle> trs(N);
-    for (auto &tr : trs) {
-        auto tmp_vec = rand_vec(50.0f);
-        for (auto v : { 0, 1, 2 }) {
-            auto disp = rand_vec(1.0f);
-            for (auto d : { 0, 1, 2 }) {
-                tr[v][d] = tmp_vec[d] + disp[d];
-            }
+std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
+    size_t N = 0;
+    size_t total_time = 0;
+    std::cin >> N >> total_time;
+    struct Pack_of_data {
+        glm::Triangle tr;
+        glm::vec3 axis[2];
+        double omega;
+    };
+    std::vector<Pack_of_data> data(N);
+    for (auto& it : data) {
+        std::cin >> it.tr;
+        std::cin >> it.axis[0] >> it.axis[1];
+        std::cin >> it.omega;
+    }
+
+    std::vector<Geomentry::Cylinder> cylinders(N);
+    for (size_t i = 0; i < N; i++) {
+        cylinders[i] = Geomentry::Cylinder(data[i].tr, { data[i].axis[0], data[i].axis[1] });
+    }
+
+    Geomentry::Vec3 min = cylinders[0].get_box().get_min();
+    Geomentry::Vec3 max = cylinders[0].get_box().get_max();
+    for (size_t i = 1; i < N; i++) {
+        auto min_ = cylinders[i].get_box().get_min();
+        auto max_ = cylinders[i].get_box().get_max();
+
+        for (int i = 0; i < 3; i++) {
+            min[i] = std::min(min[i], min_[i]);
+            max[i] = std::max(max[i], max_[i]);
         }
     }
-#endif
 
-    // TODO: after reading trinagles reindex it vertices in such way
-    //       when v[0]---v[1] -- is a segment of rotation
-
-    // find an area where located all triangles
-    Geomentry::Vec3 min = trs[0][0];
-    Geomentry::Vec3 max = trs[0][0];
-    for (auto &tr : trs) {
-        for (auto d : {0, 1, 2})
-            for (auto v : {0, 1, 2}) {
-                min[d] = std::min(min[d], tr[v][d]);
-                max[d] = std::max(max[d], tr[v][d]);
-            }
-    }
-
-    Algorithm::Octree tree(min, max, trs);
+    Algorithm::Octree tree(min, max, cylinders);
     for (size_t i = 0; i < N; i++)
-        tree.insert(trs[i], i);
+        tree.insert(cylinders[i], i);
 
-    // TODO: dfs should generate an array of pairs, that represend
-    //       indices of triangles, that we will check for intersection
-    //       each frame. So load this pairs into memory in GPU
-    // dfs
     tree.DFS();
-
+    auto set_of_pairs = tree.get_set();
 
     std::vector<Vulkan::Mesh::Vertex> result(3 * N);
     size_t current_tr = 0;
@@ -100,10 +89,10 @@ std::vector<Vulkan::Mesh::Vertex> read_vertices_from_file() {
     glm::vec3 vert[3];
     auto set = tree.get_set();
     for (size_t i = 0; i < N; i++) {
-        bool is_intersected = set[i];
+        bool is_intersected = false;
+
         for (auto vi : {0, 1, 2})
-            for (auto di : {0, 1, 2})
-                vert[vi][di] = trs[i][vi][di];
+            vert[vi] = data[i].tr[vi];
 
         glm::vec3 n = glm::cross(vert[0] - vert[1], vert[0] - vert[2]);
         n = glm::normalize(n);

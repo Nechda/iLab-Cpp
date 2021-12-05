@@ -92,3 +92,9 @@ add_executable(
 add_dependencies(triangles Shaders)
 
 target_link_libraries(triangles ${GLFW_LIB} ${VULKAN_LIB})
+
+add_executable(
+	tester
+	Tester.cpp
+    Octree/triangle.cpp
+)

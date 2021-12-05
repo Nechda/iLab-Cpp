@@ -60,8 +60,28 @@ bool is_intersected_impl(const Triangle &a, const Triangle &b) {
     return is_intersected_proto(a, b) || is_intersected_proto(b, a);
 }
 
-bool Triangle::intersected(const Triangle &lhs) const {
-    const auto &rhs = *this;
-    return is_intersected_impl(rhs, lhs);
+bool Triangle::intersected(const Triangle &rhs) const {
+    const auto &lhs = *this;
+    return is_intersected_impl(lhs, rhs);
+}
+
+std::ostream &operator<<(std::ostream &stream, const Vec3 &vec) {
+    stream << "{" << vec[0] << ", " << vec[1] << ", " << vec[2] << "}";
+    return stream;
 }
 } // namespace Geomentry
+
+
+namespace glm {
+    std::istream &operator>>(std::istream &stream, vec3 &vec) {
+        for (auto d : { 0, 1, 2 })
+            stream >> vec[d];
+        return stream;
+    }
+
+    std::istream &operator>>(std::istream &stream, Triangle &tr) {
+        for (auto v : { 0, 1, 2 })
+            stream >> tr[v];
+        return stream;
+    }
+};
