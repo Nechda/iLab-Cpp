@@ -35,17 +35,17 @@ class App {
     void freeCommandBuffers();
     void updateUniformBuffer();
 
-    WindowInfo window{WIDTH, HEIGHT};
-    Vulkan::Device device{window};
-    std::unique_ptr<Vulkan::DescriptorPool> globalPool{};
-    std::unique_ptr<Vulkan::SwapChain> swapChain;
-    std::unique_ptr<Vulkan::Pipeline> pipeline;
+    WindowInfo window_m{WIDTH, HEIGHT};
+    Vulkan::Device device_m{window_m};
+    std::unique_ptr<Vulkan::DescriptorPool> globalPool_m{};
+    std::unique_ptr<Vulkan::SwapChain> swapChain_m;
+    std::unique_ptr<Vulkan::Pipeline> pipeline_m;
 
-    std::unique_ptr<Vulkan::Mesh> mesh;
+    std::unique_ptr<Vulkan::Mesh> mesh_m;
 
-    std::vector<std::unique_ptr<Vulkan::Buffer>> sceneParamsUniformBuffer;
-    std::vector<VkDescriptorSet> globalDescriptorSets;
+    std::vector<std::unique_ptr<Vulkan::Buffer>> sceneParamsUniformBuffer_m;
+    std::vector<VkDescriptorSet> globalDescriptorSets_m;
 
-    VkPipelineLayout pipelineLayout;
-    std::vector<VkCommandBuffer> commandBuffers;
+    VkPipelineLayout pipelineLayout_m;
+    std::vector<VkCommandBuffer> commandBuffers_m;
 };
