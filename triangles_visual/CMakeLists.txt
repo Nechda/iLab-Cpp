@@ -80,6 +80,7 @@ add_custom_target(
 add_executable(
     triangles
     main.cpp
+    App.cpp
     Octree/triangle.cpp
     Lowering/Buffer.cpp
     Lowering/Descriptors.cpp
